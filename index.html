@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binance Volume Surge Monitor</title>
+    <!-- Google Fonts: Inter for UI, Orbitron for trading digits -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- СТИЛІ І ДИЗАЙН СИСТЕМА (GLASSMORPHISM & DARK NEON) --- */
+        :root {
+            --bg-color: #030712;
+            --panel-bg: rgba(17, 24, 39, 0.7);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-amber: #fbbf24;
+            --font-ui: 'Inter', sans-serif;
+            --font-mono: 'Orbitron', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 45%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            font-family: var(--font-ui);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- HEADER --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: rgba(3, 7, 18, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--panel-border);
+            z-index: 10;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-green));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #000;
+            font-size: 18px;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            background: linear-gradient(to right, #ffffff, #9ca3af);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 6px 14px;
+            border-radius: 9999px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent-red);
+            box-shadow: 0 0 8px var(--accent-red);
+            transition: all 0.3s ease;
+        }
+
+        .status-dot.connected {
+            background-color: var(--accent-green);
+            box-shadow: 0 0 10px var(--accent-green);
+            animation: pulse-green 2s infinite;
+        }
+
+        /* --- DASHBOARD GRID --- */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 350px 1fr 400px;
+            gap: 16px;
+            padding: 16px;
+            flex-grow: 1;
+            overflow: hidden;
+            height: calc(100vh - 69px);
+        }
+
+        /* --- COMMON PANEL STYLES --- */
+        .panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .panel-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .panel-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-body {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        /* --- ЛІВА ПАНЕЛЬ: АЛЕРТИ --- */
+        .alerts-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .alert-card {
+            background: rgba(251, 191, 36, 0.03);
+            border: 1px solid rgba(251, 191, 36, 0.15);
+            border-radius: 12px;
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            animation: slide-in 0.3s ease-out, highlight-gold 1.5s ease-out;
+        }
+
+        .alert-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-amber);
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.15);
+            background: rgba(251, 191, 36, 0.06);
+        }
+
+        .alert-card.selected {
+            background: rgba(59, 130, 246, 0.08);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);
+        }
+
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .alert-symbol {
+            font-family: var(--font-mono);
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .alert-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .alert-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+        }
+
+        .alert-stat-val {
+            font-family: var(--font-mono);
+            color: var(--text-primary);
+        }
+
+        .alert-increase {
+            color: var(--accent-amber);
+            font-weight: 700;
+            font-size: 0.95rem;
+            font-family: var(--font-mono);
+        }
+
+        .alert-buyers {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .alert-buyers-bar-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 9999px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+
+        .alert-buyers-bar {
+            height: 100%;
+            background: var(--accent-green);
+            border-radius: 9999px;
+        }
+
+        /* --- ЦЕНТРАЛЬНА ПАНЕЛЬ: ОГЛЯД МОНЕТИ ТА СТАКАН --- */
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .search-container {
+            position: relative;
+            flex-grow: 1;
+        }
+
+        .search-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            padding: 10px 16px;
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: var(--font-ui);
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .coin-details-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .selected-coin-title {
+            font-family: var(--font-mono);
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .selected-coin-price {
+            font-family: var(--font-mono);
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent-green);
+        }
+
+        .selected-coin-price.down {
+            color: var(--accent-red);
+        }
+
+        /* --- ORDER BOOK STYLING --- */
+        .orderbook-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            flex-grow: 1;
+            min-height: 380px;
+        }
+
+        .orderbook-side {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ob-header {
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--panel-border);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-secondary);
+        }
+
+        .ob-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .ob-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            padding: 4px 6px;
+            position: relative;
+            font-family: var(--font-mono);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .ob-row-bar {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            z-index: 1;
+            opacity: 0.12;
+            transition: width 0.15s ease-out;
+        }
+
+        .ob-bids .ob-row-bar {
+            background-color: var(--accent-green);
+        }
+
+        .ob-asks .ob-row-bar {
+            background-color: var(--accent-red);
+        }
+
+        .ob-val {
+            position: relative;
+            z-index: 2;
+        }
+
+        .ob-price {
+            font-weight: 600;
+        }
+
+        .ob-bids .ob-price {
+            color: var(--accent-green);
+        }
+
+        .ob-asks .ob-price {
+            color: var(--accent-red);
+        }
+
+        .ob-amount {
+            color: var(--text-primary);
+        }
+
+        /* --- ПРАВА ПАНЕЛЬ: ОСТАННІ УГОДИ --- */
+        .trades-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .trade-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--panel-border);
+            margin-bottom: 8px;
+        }
+
+        .trade-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 8px;
+            font-size: 0.8rem;
+            font-family: var(--font-mono);
+            border-radius: 6px;
+            transition: background 0.1s;
+        }
+
+        .trade-row:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .trade-row.buy .trade-price {
+            color: var(--accent-green);
+        }
+
+        .trade-row.sell .trade-price {
+            color: var(--accent-red);
+        }
+
+        .trade-time {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+
+        /* --- АНІМАЦІЇ --- */
+        @keyframes pulse-green {
+            0% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        @keyframes slide-in {
+            from {
+                opacity: 0;
+                transform: translateY(-15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes highlight-gold {
+            0% {
+                background: rgba(251, 191, 36, 0.35);
+                box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
+            }
+            100% {
+                background: rgba(251, 191, 36, 0.03);
+                box-shadow: none;
+            }
+        }
+
+        /* Стилізація скролбару */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* --- RESPONSIVE LAYOUT --- */
+        @media (max-width: 1200px) {
+            .dashboard-container {
+                grid-template-columns: 300px 1fr;
+            }
+            .panel-right {
+                display: none; /* Ховаємо угоди на невеликих екранах */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-section">
+            <div class="logo-icon">B</div>
+            <h1>Volume Surge Monitor & Terminal</h1>
+        </div>
+        <div class="connection-status">
+            <div id="statusDot" class="status-dot"></div>
+            <span id="statusText">Бекенд: Відключено</span>
+        </div>
+    </header>
+
+    <div class="dashboard-container">
+        
+        <!-- ЛІВА ПАНЕЛЬ: СПОВІЩЕННЯ ПРО СПЛЕКСИ -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span style="color: var(--accent-amber)">⚠️</span>
+                    Стрічка аномалій об'єму
+                </div>
+                <span id="alertCount" style="font-size: 0.75rem; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 9999px; font-family: var(--font-mono);">0 аalert-ів</span>
+            </div>
+            <div class="panel-body" id="alertsContainer">
+                <div class="alerts-feed" id="alertsFeed">
+                    <!-- Алерти будуть рендеритися сюди за допомогою JS -->
+                    <div style="color: var(--text-secondary); text-align: center; margin-top: 40px; font-size: 0.85rem;" id="noAlertsMsg">
+                        Очікування аномалій... Запустіть бекенд-сервер `server.py`
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ЦЕНТРАЛЬНА ПАНЕЛЬ: СТАКАН ТА ПОШУК -->
+        <div class="panel">
+            <div class="panel-header" style="justify-content: flex-start; gap: 12px;">
+                <div class="panel-title">
+                    <span>📊</span>
+                    Інтерактивний термінал
+                </div>
+                <div class="search-container">
+                    <input type="text" class="search-input" id="coinSearch" placeholder="Пошук USDT монети (наприклад: BTC)...">
+                </div>
+            </div>
+            <div class="panel-body" style="display: flex; flex-direction: column;">
+                
+                <div class="coin-details-bar">
+                    <div class="selected-coin-title">
+                        <span id="activeSymbol">BTCUSDT</span>
+                    </div>
+                    <div class="selected-coin-price" id="activePrice">--.--</div>
+                </div>
+
+                <div class="orderbook-container">
+                    <!-- КУПІВЛЯ (BIDS) -->
+                    <div class="orderbook-side">
+                        <div class="ob-header">
+                            <span>Ціна (USDT)</span>
+                            <span>Розмір</span>
+                        </div>
+                        <div class="ob-rows ob-bids" id="bidsContainer">
+                            <!-- Рядки бідів рендеряться сюди -->
+                        </div>
+                    </div>
+                    <!-- ПРОДАЖ (ASKS) -->
+                    <div class="orderbook-side">
+                        <div class="ob-header">
+                            <span>Ціна (USDT)</span>
+                            <span>Розмір</span>
+                        </div>
+                        <div class="ob-rows ob-asks" id="asksContainer">
+                            <!-- Рядки асків рендеряться сюди -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ПРАВА ПАНЕЛЬ: ОСТАННІ УГОДИ В РЕАЛЬНОМУ ЧАСІ -->
+        <div class="panel panel-right">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span>⚡</span>
+                    Останні угоди
+                </div>
+                <span id="tradeIndicator" style="width: 8px; height: 8px; border-radius: 50%; background: transparent; transition: background 0.1s;"></span>
+            </div>
+            <div class="panel-body" id="tradesContainer">
+                <div class="trade-header">
+                    <span>Ціна</span>
+                    <span>Об'єм</span>
+                    <span>Час</span>
+                </div>
+                <div class="trades-feed" id="tradesFeed">
+                    <!-- Угоди рендеряться сюди -->
+                    <div style="color: var(--text-secondary); text-align: center; margin-top: 40px; font-size: 0.85rem;" id="noTradesMsg">
+                        Виберіть монету для підключення до торгів
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- CONFIG & GLOBAL STATE ---
+        const LOCAL_WS_URL = "ws://localhost:8765";
+        let localWs = null;
+        let binanceWs = null;
+        let selectedSymbol = "BTCUSDT";
+        let alertsList = [];
+
+        // DOM elements
+        const statusDot = document.getElementById("statusDot");
+        const statusText = document.getElementById("statusText");
+        const alertsFeed = document.getElementById("alertsFeed");
+        const noAlertsMsg = document.getElementById("noAlertsMsg");
+        const alertCount = document.getElementById("alertCount");
+        const activeSymbol = document.getElementById("activeSymbol");
+        const activePrice = document.getElementById("activePrice");
+        const bidsContainer = document.getElementById("bidsContainer");
+        const asksContainer = document.getElementById("asksContainer");
+        const tradesFeed = document.getElementById("tradesFeed");
+        const noTradesMsg = document.getElementById("noTradesMsg");
+        const tradeIndicator = document.getElementById("tradeIndicator");
+        const coinSearch = document.getElementById("coinSearch");
+
+        // --- CONNECT TO LOCAL PYTHON SERVER ---
+        function connectLocalServer() {
+            localWs = new WebSocket(LOCAL_WS_URL);
+
+            localWs.onopen = () => {
+                statusDot.classList.add("connected");
+                statusText.innerText = "Бекенд: Підключено";
+                console.log("Успішне підключення до локального сервера.");
+            };
+
+            localWs.onclose = () => {
+                statusDot.classList.remove("connected");
+                statusText.innerText = "Бекенд: Відключено";
+                console.log("Відключено від локального сервера. Перепідключення через 3 сек...");
+                setTimeout(connectLocalServer, 3000);
+            };
+
+            localWs.onerror = (err) => {
+                console.error("Помилка локального сокета:", err);
+            };
+
+            localWs.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    if (message.type === "alert") {
+                        handleIncomingAlert(message.data);
+                    }
+                } catch (e) {
+                    console.error("Помилка обробки повідомлення локального сервера:", e);
+                }
+            };
+        }
+
+        // --- HANDLE INCOMING VOLUME SURGE ALERT ---
+        function handleIncomingAlert(data) {
+            // Створюємо картку алерту
+            const card = document.createElement("div");
+            card.className = "alert-card";
+            if (data.symbol === selectedSymbol) {
+                card.classList.add("selected");
+            }
+            
+            const dateStr = new Date(data.timestamp * 1000).toLocaleTimeString();
+            
+            card.innerHTML = `
+                <div class="alert-header">
+                    <span class="alert-symbol">${data.symbol}</span>
+                    <span class="alert-time">${dateStr}</span>
+                </div>
+                <div class="alert-stats-grid">
+                    <div>Поточний 1м:</div>
+                    <div class="alert-stat-val">$${Math.round(data.current_volume).toLocaleString()}</div>
+                    <div>Середній 14м:</div>
+                    <div class="alert-stat-val">$${Math.round(data.average_volume).toLocaleString()}</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                    <span class="alert-increase">+${data.increase_percent.toFixed(1)}%</span>
+                    <div class="alert-buyers">
+                        <span>${data.buyer_percentage.toFixed(0)}% покупців</span>
+                    </div>
+                </div>
+                <div class="alert-buyers-bar-container">
+                    <div class="alert-buyers-bar" style="width: ${data.buyer_percentage}%"></div>
+                </div>
+            `;
+
+            // Клік по картці вибирає монету
+            card.onclick = () => {
+                selectCoin(data.symbol);
+            };
+
+            // Видаляємо повідомлення "очікування"
+            if (noAlertsMsg) {
+                noAlertsMsg.remove();
+            }
+
+            // Додаємо картку зверху списку
+            alertsFeed.insertBefore(card, alertsFeed.firstChild);
+            
+            alertsList.unshift({ symbol: data.symbol, element: card });
+            alertCount.innerText = `${alertsList.length} алертів`;
+
+            // Обмежуємо кількість алертів в DOM (макс. 20)
+            if (alertsList.length > 20) {
+                const removed = alertsList.pop();
+                if (removed.element && removed.element.parentNode) {
+                    removed.element.parentNode.removeChild(removed.element);
+                }
+            }
+        }
+
+        // --- SELECT COIN FOR TERMINAL VIEW ---
+        function selectCoin(symbol) {
+            symbol = symbol.toUpperCase();
+            if (selectedSymbol === symbol && binanceWs) return;
+
+            console.log(`Вибрано монету: ${symbol}`);
+            selectedSymbol = symbol;
+            activeSymbol.innerText = symbol;
+            activePrice.innerText = "--.--";
+            activePrice.className = "selected-coin-price";
+
+            // Оновлюємо вибрану підсвітку в картах алертів
+            const cards = document.querySelectorAll(".alert-card");
+            cards.forEach(card => {
+                const sym = card.querySelector(".alert-symbol").innerText;
+                if (sym === symbol) {
+                    card.classList.add("selected");
+                } else {
+                    card.classList.remove("selected");
+                }
+            });
+
+            // Очищуємо контейнери
+            bidsContainer.innerHTML = "";
+            asksContainer.innerHTML = "";
+            tradesFeed.innerHTML = "";
+            if (noTradesMsg) noTradesMsg.style.display = "none";
+
+            // Перепідключаємо Binance WS
+            connectBinanceStreams(symbol);
+        }
+
+        // --- CONNECT BINANCE WEBSOCKET FOR THE SELECTED COIN ---
+        function connectBinanceStreams(symbol) {
+            if (binanceWs) {
+                binanceWs.close();
+            }
+
+            const streamName = `${symbol.toLowerCase()}@depth10@100ms/${symbol.toLowerCase()}@trade`;
+            const uri = `wss://stream.binance.com:9443/stream?streams=${streamName}`;
+            
+            binanceWs = new WebSocket(uri);
+
+            binanceWs.onmessage = (event) => {
+                try {
+                    const payload = JSON.parse(event.data);
+                    const stream = payload.stream;
+                    const data = payload.data;
+
+                    if (stream.includes("@depth")) {
+                        updateOrderBook(data);
+                    } else if (stream.includes("@trade")) {
+                        updateTradesFeed(data);
+                    }
+                } catch (e) {
+                    console.error("Помилка обробки Binance повідомлення:", e);
+                }
+            };
+
+            binanceWs.onclose = () => {
+                console.log(`Binance WS для ${symbol} закрито.`);
+            };
+
+            binanceWs.onerror = (err) => {
+                console.error("Помилка Binance сокета:", err);
+            };
+        }
+
+        // --- UPDATE ORDER BOOK DOM ---
+        function updateOrderBook(data) {
+            // bids та asks мають формат [[price, qty], ...]
+            const bids = data.bids || [];
+            const asks = data.asks || [];
+
+            // Знаходимо максимальний об'єм для малювання фонової діаграми (progress bars)
+            let maxVolume = 0;
+            const parseVolume = (item) => parseFloat(item[1]);
+            
+            bids.forEach(item => { maxVolume = Math.max(maxVolume, parseVolume(item)); });
+            asks.forEach(item => { maxVolume = Math.max(maxVolume, parseVolume(item)); });
+
+            // Оновлюємо Bids (покупці)
+            const bidsFragment = document.createDocumentFragment();
+            bids.slice(0, 10).forEach(bid => {
+                const price = parseFloat(bid[0]);
+                const qty = parseFloat(bid[1]);
+                const pct = maxVolume > 0 ? (qty / maxVolume * 100) : 0;
+
+                const row = document.createElement("div");
+                row.className = "ob-row";
+                row.innerHTML = `
+                    <span class="ob-price">${price.toFixed(4)}</span>
+                    <span class="ob-amount ob-val">${qty.toFixed(2)}</span>
+                    <div class="ob-row-bar" style="width: ${pct}%"></div>
+                `;
+                bidsFragment.appendChild(row);
+            });
+            bidsContainer.innerHTML = "";
+            bidsContainer.appendChild(bidsFragment);
+
+            // Оновлюємо Asks (продавці)
+            const asksFragment = document.createDocumentFragment();
+            asks.slice(0, 10).forEach(ask => {
+                const price = parseFloat(ask[0]);
+                const qty = parseFloat(ask[1]);
+                const pct = maxVolume > 0 ? (qty / maxVolume * 100) : 0;
+
+                const row = document.createElement("div");
+                row.className = "ob-row";
+                row.innerHTML = `
+                    <span class="ob-price">${price.toFixed(4)}</span>
+                    <span class="ob-amount ob-val">${qty.toFixed(2)}</span>
+                    <div class="ob-row-bar" style="width: ${pct}%"></div>
+                `;
+                asksFragment.appendChild(row);
+            });
+            asksContainer.innerHTML = "";
+            asksContainer.appendChild(asksFragment);
+        }
+
+        // --- UPDATE TRADES FEED DOM & PRICE BAR ---
+        let lastPrice = null;
+        
+        function updateTradesFeed(data) {
+            const price = parseFloat(data.p);
+            const qty = parseFloat(data.q);
+            const isBuyerMaker = data.m;
+            const isBuy = !isBuyerMaker;
+            const date = new Date(data.T);
+            const timeStr = date.toTimeString().split(' ')[0];
+
+            // Оновлюємо поточну ціну у верхній панелі
+            activePrice.innerText = price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+            if (lastPrice !== null) {
+                if (price > lastPrice) {
+                    activePrice.className = "selected-coin-price"; // Green
+                } else if (price < lastPrice) {
+                    activePrice.className = "selected-coin-price down"; // Red
+                }
+            }
+            lastPrice = price;
+
+            // Візуальний індикатор угод (блимання зеленим/червоним при новій угоді)
+            tradeIndicator.style.background = isBuy ? "var(--accent-green)" : "var(--accent-red)";
+            setTimeout(() => {
+                tradeIndicator.style.background = "transparent";
+            }, 100);
+
+            // Створюємо рядок угоди
+            const row = document.createElement("div");
+            row.className = `trade-row ${isBuy ? "buy" : "sell"}`;
+            row.innerHTML = `
+                <span class="trade-price">${price.toFixed(4)}</span>
+                <span class="trade-amount">${qty.toFixed(2)}</span>
+                <span class="trade-time">${timeStr}</span>
+            `;
+
+            tradesFeed.insertBefore(row, tradesFeed.firstChild);
+
+            // Обмежуємо стрічку до 20 останніх угод
+            if (tradesFeed.children.length > 20) {
+                tradesFeed.removeChild(tradesFeed.lastChild);
+            }
+        }
+
+        // --- SEARCH INPUT HANDLING ---
+        coinSearch.addEventListener("keyup", (event) => {
+            if (event.key === "Enter") {
+                let query = coinSearch.value.trim().toUpperCase();
+                if (query) {
+                    // Якщо користувач ввів просто назву монети, наприклад BTC, додаємо USDT
+                    if (!query.endsWith("USDT") && query.length < 6) {
+                        query = query + "USDT";
+                    }
+                    selectCoin(query);
+                    coinSearch.value = "";
+                }
+            }
+        });
+
+        // --- INITIALIZATION ---
+        window.addEventListener("DOMContentLoaded", () => {
+            // Запуск локального сокета
+            connectLocalServer();
+            // Первинний вибір BTCUSDT
+            selectCoin("BTCUSDT");
+        });
+    </script>
+</body>
+</html>
