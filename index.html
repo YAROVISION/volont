@@ -3,26 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Binance Volume Surge Monitor</title>
-    <!-- Google Fonts: Inter for UI, Orbitron for trading digits -->
+    <title>Binance Volume Surge Monitor // Technical Terminal</title>
+    <!-- Google Fonts: Space Grotesk for technical text, Orbitron for digital numbers, JetBrains Mono for telemetry -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     
     <style>
-        /* --- СТИЛІ І ДИЗАЙН СИСТЕМА (GLASSMORPHISM & DARK NEON) --- */
+        /* --- DESIGN SYSTEM: BLUEPRINT & CONSTRUCTION WORKSPACE --- */
         :root {
-            --bg-color: #030712;
-            --panel-bg: rgba(17, 24, 39, 0.7);
-            --panel-border: rgba(255, 255, 255, 0.08);
-            --text-primary: #f3f4f6;
-            --text-secondary: #9ca3af;
-            --accent-blue: #3b82f6;
-            --accent-green: #10b981;
-            --accent-red: #ef4444;
-            --accent-amber: #fbbf24;
-            --font-ui: 'Inter', sans-serif;
+            --bg-blueprint: #2c4c82; /* Blueprint Blue background */
+            --bg-grid: rgba(255, 255, 255, 0.05);
+            --bg-grid-major: rgba(255, 255, 255, 0.12);
+            
+            --color-orange: #ef633e; /* Construction Orange accent */
+            --color-electric: #2a6de1; /* Electric Blue accent */
+            --color-kraft: #d6ccba; /* Kraft Paper Beige */
+            --color-white: #ffffff;
+            --color-black: #111111;
+            
+            /* Statuses & Alerts */
+            --color-green: #00ff88;
+            --color-red: #ff3e3e;
+            --color-amber: #ffbb00;
+            
+            --font-tech: 'Space Grotesk', sans-serif;
             --font-mono: 'Orbitron', monospace;
+            --font-code: 'JetBrains Mono', monospace;
         }
 
         * {
@@ -32,235 +39,378 @@
         }
 
         body {
-            background-color: var(--bg-color);
+            background-color: var(--bg-blueprint);
+            /* Orthogonal blueprint grid background */
             background-image: 
-                radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 45%);
-            background-attachment: fixed;
-            color: var(--text-primary);
-            font-family: var(--font-ui);
+                linear-gradient(var(--bg-grid) 1px, transparent 1px),
+                linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px),
+                linear-gradient(var(--bg-grid-major) 1px, transparent 1px),
+                linear-gradient(90deg, var(--bg-grid-major) 1px, transparent 1px);
+            background-size: 20px 20px, 20px 20px, 100px 100px, 100px 100px;
+            background-position: center center;
+            color: var(--color-white);
+            font-family: var(--font-tech);
             height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            position: relative;
         }
 
-        /* --- HEADER --- */
+        /* Blueprint Corner Elements & Guides */
+        body::before {
+            content: "DRAWING NO: VOL-919 // SCALE: 1:1 // GRID: 20mm";
+            position: absolute;
+            bottom: 8px;
+            left: 16px;
+            font-family: var(--font-code);
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.35);
+            pointer-events: none;
+            letter-spacing: 0.1em;
+            z-index: 1;
+        }
+
+        body::after {
+            content: "YAROVISION // VOLONT MONITOR SYSTEM";
+            position: absolute;
+            bottom: 8px;
+            right: 16px;
+            font-family: var(--font-code);
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.35);
+            pointer-events: none;
+            letter-spacing: 0.1em;
+            z-index: 1;
+        }
+
+        /* --- HEADER (Technical Title Block) --- */
         header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 16px 24px;
-            background: rgba(3, 7, 18, 0.8);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--panel-border);
+            background: rgba(44, 76, 130, 0.95);
+            border-bottom: 2px solid var(--color-white);
             z-index: 10;
+            position: relative;
+        }
+
+        header::after {
+            content: "";
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background-color: var(--color-orange);
         }
 
         .logo-section {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 16px;
         }
 
-        .logo-icon {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-green));
-            border-radius: 8px;
+        /* Wireframe Isometric Logo */
+        .logo-container {
+            width: 36px;
+            height: 36px;
+            position: relative;
+            border: 2px solid var(--color-orange);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
-            color: #000;
-            font-size: 18px;
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+        
+        .logo-wireframe {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 1px dashed rgba(255, 255, 255, 0.5);
+            transform: rotate(45deg);
+        }
+
+        .logo-inner {
+            font-family: var(--font-mono);
+            font-weight: 800;
+            color: var(--color-orange);
+            font-size: 1.25rem;
+            z-index: 2;
         }
 
         h1 {
-            font-size: 1.25rem;
+            font-size: 1.3rem;
             font-weight: 700;
-            letter-spacing: -0.025em;
-            background: linear-gradient(to right, #ffffff, #9ca3af);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.01em;
+            text-transform: uppercase;
+            color: var(--color-white);
+            font-family: var(--font-tech);
         }
 
         .connection-status {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            background: rgba(255, 255, 255, 0.03);
+            gap: 12px;
+            font-size: 0.75rem;
+            font-family: var(--font-code);
+            color: var(--color-white);
+            background: transparent;
             padding: 6px 14px;
-            border-radius: 9999px;
-            border: 1px solid var(--panel-border);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: var(--accent-red);
-            box-shadow: 0 0 8px var(--accent-red);
+            width: 6px;
+            height: 6px;
+            background-color: var(--color-red);
+            box-shadow: 0 0 8px var(--color-red);
             transition: all 0.3s ease;
         }
 
         .status-dot.connected {
-            background-color: var(--accent-green);
-            box-shadow: 0 0 10px var(--accent-green);
-            animation: pulse-green 2s infinite;
+            background-color: var(--color-green);
+            box-shadow: 0 0 10px var(--color-green);
+            animation: pulse-green 1.5s infinite;
         }
 
         /* --- DASHBOARD GRID --- */
         .dashboard-container {
             display: grid;
-            grid-template-columns: 350px 1fr 400px;
-            gap: 16px;
-            padding: 16px;
+            grid-template-columns: 360px 1fr 400px;
+            gap: 20px;
+            padding: 20px;
             flex-grow: 1;
             overflow: hidden;
-            height: calc(100vh - 69px);
+            height: calc(100vh - 72px);
+            position: relative;
         }
 
-        /* --- COMMON PANEL STYLES --- */
+        /* --- LAYERED PANELS (Sheets of Blueprint Paper) --- */
         .panel {
-            background: var(--panel-bg);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--panel-border);
-            border-radius: 16px;
+            background: rgba(32, 58, 100, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.25);
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.25);
+            position: relative;
+        }
+
+        .panel-left {
+            background: rgba(32, 58, 100, 0.96);
+        }
+
+        .panel-center {
+            background: rgba(27, 50, 87, 0.98);
+            border: 1px solid var(--color-white);
+        }
+
+        .panel-right {
+            background: rgba(32, 58, 100, 0.96);
         }
 
         .panel-header {
-            padding: 16px;
-            border-bottom: 1px solid var(--panel-border);
+            padding: 12px 16px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.25);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(255, 255, 255, 0.03);
+            font-family: var(--font-tech);
         }
 
         .panel-title {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: var(--text-primary);
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--color-white);
             display: flex;
             align-items: center;
             gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .panel-title span.icon {
+            color: var(--color-orange);
         }
 
         .panel-body {
             flex-grow: 1;
             overflow-y: auto;
             padding: 16px;
+            position: relative;
         }
 
-        /* --- ЛІВА ПАНЕЛЬ: АЛЕРТИ --- */
+        /* Technical measurement markings inside panels */
+        .panel::before {
+            content: "+";
+            position: absolute;
+            top: 2px;
+            left: 4px;
+            font-family: var(--font-code);
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.35);
+            pointer-events: none;
+        }
+
+        .panel::after {
+            content: "+";
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            font-family: var(--font-code);
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.35);
+            pointer-events: none;
+        }
+
+        /* --- ALERTS FEED (PHYSICAL NOTES LAYERED) --- */
         .alerts-feed {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 16px;
         }
 
         .alert-card {
-            background: rgba(251, 191, 36, 0.03);
-            border: 1px solid rgba(251, 191, 36, 0.15);
-            border-radius: 12px;
-            padding: 14px;
-            cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: var(--color-kraft);
+            color: var(--color-black);
+            padding: 16px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
             position: relative;
-            overflow: hidden;
-            animation: slide-in 0.3s ease-out, highlight-gold 1.5s ease-out;
+            cursor: pointer;
+            box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.15);
+            transition: transform 0.2s, box-shadow 0.2s;
+            animation: slide-in 0.3s ease-out, highlight-pulse 1s ease-out;
+        }
+
+        /* Give them a slight angle for a natural physical look */
+        .alert-card:nth-child(even) {
+            transform: rotate(-0.5deg);
+        }
+        .alert-card:nth-child(odd) {
+            transform: rotate(0.5deg);
         }
 
         .alert-card:hover {
-            transform: translateY(-2px);
-            border-color: var(--accent-amber);
-            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.15);
-            background: rgba(251, 191, 36, 0.06);
+            transform: translateY(-2px) scale(1.01) rotate(0deg);
+            box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.25);
         }
 
+        /* Selected card styled as Construction Orange sheet */
         .alert-card.selected {
-            background: rgba(59, 130, 246, 0.08);
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);
+            background-color: var(--color-orange);
+            color: var(--color-white);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px) rotate(0deg);
+            box-shadow: 6px 6px 0px rgba(239, 99, 62, 0.3);
         }
 
         .alert-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            border-bottom: 1px dashed rgba(17, 17, 17, 0.15);
+            padding-bottom: 6px;
+        }
+
+        .alert-card.selected .alert-header {
+            border-bottom-color: rgba(255, 255, 255, 0.25);
         }
 
         .alert-symbol {
             font-family: var(--font-mono);
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #ffffff;
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
         }
 
         .alert-time {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
+            font-family: var(--font-code);
+            font-size: 0.7rem;
+            opacity: 0.7;
         }
 
         .alert-stats-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            font-size: 0.8rem;
-            margin-bottom: 8px;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 6px;
+            font-size: 0.75rem;
+            margin-bottom: 10px;
+            font-family: var(--font-tech);
+        }
+
+        .alert-stat-lbl {
+            opacity: 0.8;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.02em;
         }
 
         .alert-stat-val {
             font-family: var(--font-mono);
-            color: var(--text-primary);
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .alert-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
         }
 
         .alert-increase {
-            color: var(--accent-amber);
-            font-weight: 700;
-            font-size: 0.95rem;
+            font-weight: 800;
+            font-size: 1.1rem;
             font-family: var(--font-mono);
+            color: var(--color-electric);
+        }
+
+        .alert-card.selected .alert-increase {
+            color: var(--color-white);
         }
 
         .alert-buyers {
             display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 2px;
+            font-size: 0.7rem;
+            font-weight: 600;
         }
 
         .alert-buyers-bar-container {
             width: 100%;
             height: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 9999px;
-            margin-top: 4px;
-            overflow: hidden;
+            background: rgba(0, 0, 0, 0.08);
+            margin-top: 6px;
+            position: relative;
+        }
+
+        .alert-card.selected .alert-buyers-bar-container {
+            background: rgba(255, 255, 255, 0.25);
         }
 
         .alert-buyers-bar {
             height: 100%;
-            background: var(--accent-green);
-            border-radius: 9999px;
+            background: var(--color-electric);
         }
 
-        /* --- ЦЕНТРАЛЬНА ПАНЕЛЬ: ОГЛЯД МОНЕТИ ТА СТАКАН --- */
+        .alert-card.selected .alert-buyers-bar {
+            background: var(--color-white);
+        }
+
+        /* --- TERMINAL BAR & CONTROLS --- */
         .terminal-header {
             display: flex;
             align-items: center;
             gap: 16px;
             margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 8px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         .search-container {
@@ -268,41 +418,67 @@
             flex-grow: 1;
         }
 
+        .search-container::before {
+            content: "SEARCH:";
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-family: var(--font-code);
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.4);
+            pointer-events: none;
+        }
+
         .search-input {
             width: 100%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--panel-border);
-            padding: 10px 16px;
-            border-radius: 10px;
-            color: var(--text-primary);
-            font-family: var(--font-ui);
-            font-size: 0.9rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px 10px 10px 68px;
+            border-radius: 0; /* Strict square corners */
+            color: var(--color-white);
+            font-family: var(--font-tech);
+            font-size: 0.85rem;
             outline: none;
             transition: all 0.2s;
         }
 
         .search-input:focus {
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
-            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--color-orange);
+            background: rgba(255, 255, 255, 0.07);
         }
 
+        /* --- ACTIVE COIN TELEMETRY --- */
         .coin-details-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 16px;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--panel-border);
-            border-radius: 12px;
+            background: var(--color-orange);
+            color: var(--color-black);
+            border: 1px solid var(--color-orange);
+            box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2);
             margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .coin-details-bar::after {
+            content: "DRAFT SHEET // SEC: 04";
+            position: absolute;
+            top: 2px;
+            right: 6px;
+            font-family: var(--font-code);
+            font-size: 0.55rem;
+            opacity: 0.5;
+            letter-spacing: 0.05em;
         }
 
         .selected-coin-title {
             font-family: var(--font-mono);
-            font-size: 1.5rem;
+            font-size: 1.7rem;
             font-weight: 800;
-            color: #ffffff;
+            color: var(--color-black);
             display: flex;
             align-items: center;
             gap: 10px;
@@ -310,22 +486,40 @@
 
         .selected-coin-price {
             font-family: var(--font-mono);
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--accent-green);
+            font-size: 1.7rem;
+            font-weight: 700;
+            color: var(--color-black);
+            transition: color 0.15s ease-out;
         }
 
-        .selected-coin-price.down {
-            color: var(--accent-red);
+        /* Flashing price direction indicators on the details bar */
+        .selected-coin-price.up-flash {
+            animation: price-up-bg 0.5s ease-out;
         }
 
-        /* --- ORDER BOOK STYLING --- */
+        .selected-coin-price.down-flash {
+            animation: price-down-bg 0.5s ease-out;
+        }
+
+        /* --- ORDER BOOK --- */
         .orderbook-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 16px;
+            gap: 20px;
             flex-grow: 1;
             min-height: 380px;
+            position: relative;
+        }
+
+        .orderbook-container::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 1px;
+            background: dashed rgba(255, 255, 255, 0.15);
+            transform: translateX(-50%);
         }
 
         .orderbook-side {
@@ -334,49 +528,59 @@
         }
 
         .ob-header {
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
             padding-bottom: 8px;
-            border-bottom: 1px solid var(--panel-border);
-            margin-bottom: 8px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
-            color: var(--text-secondary);
+            color: rgba(255, 255, 255, 0.6);
         }
 
         .ob-rows {
             display: flex;
             flex-direction: column;
-            gap: 3px;
+            gap: 4px;
         }
 
         .ob-row {
             display: flex;
             justify-content: space-between;
-            font-size: 0.8rem;
-            padding: 4px 6px;
+            font-size: 0.75rem;
+            padding: 6px 8px;
             position: relative;
             font-family: var(--font-mono);
-            border-radius: 4px;
+            border: 1px solid transparent;
             overflow: hidden;
+            background: rgba(255, 255, 255, 0.01);
+            transition: all 0.1s;
         }
 
+        .ob-row:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Blueprint Progress Visual Bar */
         .ob-row-bar {
             position: absolute;
             top: 0;
             bottom: 0;
             right: 0;
             z-index: 1;
-            opacity: 0.12;
+            opacity: 0.15;
             transition: width 0.15s ease-out;
         }
 
         .ob-bids .ob-row-bar {
-            background-color: var(--accent-green);
+            background-color: var(--color-green);
         }
 
         .ob-asks .ob-row-bar {
-            background-color: var(--accent-red);
+            background-color: var(--color-red);
         }
 
         .ob-val {
@@ -385,22 +589,24 @@
         }
 
         .ob-price {
-            font-weight: 600;
+            font-weight: 700;
+            position: relative;
+            z-index: 2;
         }
 
         .ob-bids .ob-price {
-            color: var(--accent-green);
+            color: var(--color-green);
         }
 
         .ob-asks .ob-price {
-            color: var(--accent-red);
+            color: var(--color-red);
         }
 
         .ob-amount {
-            color: var(--text-primary);
+            color: var(--color-white);
         }
 
-        /* --- ПРАВА ПАНЕЛЬ: ОСТАННІ УГОДИ --- */
+        /* --- TRADES FEED PANEL --- */
         .trades-feed {
             display: flex;
             flex-direction: column;
@@ -410,58 +616,95 @@
         .trade-header {
             display: flex;
             justify-content: space-between;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--text-secondary);
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(255, 255, 255, 0.6);
             padding-bottom: 8px;
-            border-bottom: 1px solid var(--panel-border);
-            margin-bottom: 8px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 12px;
         }
 
         .trade-row {
             display: flex;
             justify-content: space-between;
             padding: 6px 8px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-family: var(--font-mono);
-            border-radius: 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             transition: background 0.1s;
         }
 
         .trade-row:hover {
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(255, 255, 255, 0.04);
         }
 
         .trade-row.buy .trade-price {
-            color: var(--accent-green);
+            color: var(--color-green);
+            font-weight: 700;
         }
 
         .trade-row.sell .trade-price {
-            color: var(--accent-red);
+            color: var(--color-red);
+            font-weight: 700;
         }
 
         .trade-time {
-            color: var(--text-secondary);
-            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.7rem;
+            font-family: var(--font-code);
         }
 
-        /* --- АНІМАЦІЇ --- */
+        /* Alert/Empty State indicators */
+        .empty-state {
+            color: rgba(255, 255, 255, 0.4);
+            text-align: center;
+            margin-top: 60px;
+            font-size: 0.8rem;
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            padding: 24px;
+            font-family: var(--font-code);
+        }
+
+        /* --- DECORATIVE INTERACTIVE ELEMENTS --- */
+        .tech-bracket {
+            font-family: var(--font-code);
+            color: var(--color-orange);
+            font-weight: bold;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.01);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-orange);
+        }
+
+        /* --- ANIMATIONS & FLASH EFFECT --- */
         @keyframes pulse-green {
             0% {
-                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+                box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.5);
             }
             70% {
-                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+                box-shadow: 0 0 0 8px rgba(0, 255, 136, 0);
             }
             100% {
-                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+                box-shadow: 0 0 0 0 rgba(0, 255, 136, 0);
             }
         }
 
         @keyframes slide-in {
             from {
                 opacity: 0;
-                transform: translateY(-15px);
+                transform: translateY(-10px);
             }
             to {
                 opacity: 1;
@@ -469,39 +712,98 @@
             }
         }
 
-        @keyframes highlight-gold {
+        @keyframes highlight-pulse {
             0% {
-                background: rgba(251, 191, 36, 0.35);
-                box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
+                filter: brightness(1.4);
+                box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
             }
             100% {
-                background: rgba(251, 191, 36, 0.03);
-                box-shadow: none;
+                filter: brightness(1);
             }
         }
 
-        /* Стилізація скролбару */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.25);
+        /* Flashing details bar backgrounds */
+        @keyframes price-up-bg {
+            0% { background-color: var(--color-green); }
+            100% { background-color: var(--color-orange); }
         }
 
-        /* --- RESPONSIVE LAYOUT --- */
-        @media (max-width: 1200px) {
+        @keyframes price-down-bg {
+            0% { background-color: var(--color-red); }
+            100% { background-color: var(--color-orange); }
+        }
+
+        /* --- RESPONSIVE / MOBILE ADAPTATION --- */
+        @media (max-width: 1024px) {
             .dashboard-container {
-                grid-template-columns: 300px 1fr;
+                grid-template-columns: 320px 1fr;
+                gap: 16px;
+                padding: 16px;
             }
             .panel-right {
-                display: none; /* Ховаємо угоди на невеликих екранах */
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                height: auto;
+                overflow-y: auto;
+            }
+            
+            header {
+                flex-direction: column;
+                gap: 12px;
+                padding: 12px 16px;
+                align-items: flex-start;
+            }
+
+            .logo-section h1 {
+                font-size: 1.1rem;
+            }
+
+            .connection-status {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .dashboard-container {
+                display: flex;
+                flex-direction: column;
+                height: auto;
+                overflow: visible;
+                padding: 12px;
+                gap: 16px;
+            }
+
+            .panel {
+                height: auto;
+                max-height: 500px;
+                box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.25);
+            }
+
+            .panel-right {
+                display: flex !important; /* Force visibility of trades feed on mobile stack */
+            }
+
+            .alert-card:nth-child(even), .alert-card:nth-child(odd) {
+                transform: none !important;
+            }
+            
+            .alert-card:hover {
+                transform: translateY(-2px) !important;
+            }
+
+            .selected-coin-title, .selected-coin-price {
+                font-size: 1.4rem;
+            }
+
+            .orderbook-container {
+                gap: 10px;
+            }
+
+            .orderbook-container::after {
+                display: none;
             }
         }
     </style>
@@ -510,45 +812,54 @@
 
     <header>
         <div class="logo-section">
-            <div class="logo-icon">B</div>
-            <h1>Volume Surge Monitor & Terminal</h1>
+            <div class="logo-container">
+                <div class="logo-wireframe"></div>
+                <div class="logo-inner">V</div>
+            </div>
+            <h1>Volume Surge Monitor // Technical Terminal</h1>
         </div>
         <div class="connection-status">
+            <span class="tech-bracket">[</span>
             <div id="statusDot" class="status-dot"></div>
-            <span id="statusText">Бекенд: Відключено</span>
+            <span id="statusText">SYS_STATUS // OFFLINE</span>
+            <span class="tech-bracket">]</span>
         </div>
     </header>
 
     <div class="dashboard-container">
         
         <!-- ЛІВА ПАНЕЛЬ: СПОВІЩЕННЯ ПРО СПЛЕКСИ -->
-        <div class="panel">
+        <div class="panel panel-left">
             <div class="panel-header">
                 <div class="panel-title">
-                    <span style="color: var(--accent-amber)">⚠️</span>
-                    Стрічка аномалій об'єму
+                    <span class="tech-bracket">[</span>
+                    <span class="icon">⚠️</span>
+                    <span>Стрічка аномалій об'єму</span>
+                    <span class="tech-bracket">]</span>
                 </div>
-                <span id="alertCount" style="font-size: 0.75rem; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 9999px; font-family: var(--font-mono);">0 аalert-ів</span>
+                <span id="alertCount" style="font-size: 0.65rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); padding: 2px 8px; font-family: var(--font-mono);">0 ALERTS</span>
             </div>
             <div class="panel-body" id="alertsContainer">
                 <div class="alerts-feed" id="alertsFeed">
                     <!-- Алерти будуть рендеритися сюди за допомогою JS -->
-                    <div style="color: var(--text-secondary); text-align: center; margin-top: 40px; font-size: 0.85rem;" id="noAlertsMsg">
-                        Очікування аномалій... Запустіть бекенд-сервер `server.py`
+                    <div class="empty-state" id="noAlertsMsg">
+                        SYS_STATUS: IDLE // Очікування аномалій... Запустіть бекенд-сервер `server.py`
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- ЦЕНТРАЛЬНА ПАНЕЛЬ: СТАКАН ТА ПОШУК -->
-        <div class="panel">
-            <div class="panel-header" style="justify-content: flex-start; gap: 12px;">
+        <div class="panel panel-center">
+            <div class="panel-header" style="justify-content: flex-start; gap: 16px;">
                 <div class="panel-title">
-                    <span>📊</span>
-                    Інтерактивний термінал
+                    <span class="tech-bracket">[</span>
+                    <span class="icon">📊</span>
+                    <span>Специфікація креслення</span>
+                    <span class="tech-bracket">]</span>
                 </div>
                 <div class="search-container">
-                    <input type="text" class="search-input" id="coinSearch" placeholder="Пошук USDT монети (наприклад: BTC)...">
+                    <input type="text" class="search-input" id="coinSearch" placeholder="Введіть USDT пару (наприклад: BTC)...">
                 </div>
             </div>
             <div class="panel-body" style="display: flex; flex-direction: column;">
@@ -565,7 +876,7 @@
                     <div class="orderbook-side">
                         <div class="ob-header">
                             <span>Ціна (USDT)</span>
-                            <span>Розмір</span>
+                            <span>Об'єм (QTY)</span>
                         </div>
                         <div class="ob-rows ob-bids" id="bidsContainer">
                             <!-- Рядки бідів рендеряться сюди -->
@@ -575,7 +886,7 @@
                     <div class="orderbook-side">
                         <div class="ob-header">
                             <span>Ціна (USDT)</span>
-                            <span>Розмір</span>
+                            <span>Об'єм (QTY)</span>
                         </div>
                         <div class="ob-rows ob-asks" id="asksContainer">
                             <!-- Рядки асків рендеряться сюди -->
@@ -590,21 +901,23 @@
         <div class="panel panel-right">
             <div class="panel-header">
                 <div class="panel-title">
-                    <span>⚡</span>
-                    Останні угоди
+                    <span class="tech-bracket">[</span>
+                    <span class="icon">⚡</span>
+                    <span>Телеметрія угод</span>
+                    <span class="tech-bracket">]</span>
                 </div>
-                <span id="tradeIndicator" style="width: 8px; height: 8px; border-radius: 50%; background: transparent; transition: background 0.1s;"></span>
+                <span id="tradeIndicator" style="width: 6px; height: 6px; background: transparent; transition: background 0.1s;"></span>
             </div>
             <div class="panel-body" id="tradesContainer">
                 <div class="trade-header">
-                    <span>Ціна</span>
+                    <span>Ціна (USDT)</span>
                     <span>Об'єм</span>
                     <span>Час</span>
                 </div>
                 <div class="trades-feed" id="tradesFeed">
                     <!-- Угоди рендеряться сюди -->
-                    <div style="color: var(--text-secondary); text-align: center; margin-top: 40px; font-size: 0.85rem;" id="noTradesMsg">
-                        Виберіть монету для підключення до торгів
+                    <div class="empty-state" id="noTradesMsg">
+                        SYS_CMD: SELECT_ASSET // Виберіть актив для підключення потоку даних
                     </div>
                 </div>
             </div>
@@ -641,13 +954,13 @@
 
             localWs.onopen = () => {
                 statusDot.classList.add("connected");
-                statusText.innerText = "Бекенд: Підключено";
+                statusText.innerText = "SYS_STATUS // CONNECTED";
                 console.log("Успішне підключення до локального сервера.");
             };
 
             localWs.onclose = () => {
                 statusDot.classList.remove("connected");
-                statusText.innerText = "Бекенд: Відключено";
+                statusText.innerText = "SYS_STATUS // OFFLINE";
                 console.log("Відключено від локального сервера. Перепідключення через 3 сек...");
                 setTimeout(connectLocalServer, 3000);
             };
@@ -685,15 +998,15 @@
                     <span class="alert-time">${dateStr}</span>
                 </div>
                 <div class="alert-stats-grid">
-                    <div>Поточний 1м:</div>
-                    <div class="alert-stat-val">$${Math.round(data.current_volume).toLocaleString()}</div>
-                    <div>Середній 14м:</div>
-                    <div class="alert-stat-val">$${Math.round(data.average_volume).toLocaleString()}</div>
+                    <span class="alert-stat-lbl">Об'єм 1хв:</span>
+                    <span class="alert-stat-val">$${Math.round(data.current_volume).toLocaleString()}</span>
+                    <span class="alert-stat-lbl">Середній 14хв:</span>
+                    <span class="alert-stat-val">$${Math.round(data.average_volume).toLocaleString()}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                <div class="alert-footer">
                     <span class="alert-increase">+${data.increase_percent.toFixed(1)}%</span>
                     <div class="alert-buyers">
-                        <span>${data.buyer_percentage.toFixed(0)}% покупців</span>
+                        <span>BUYERS: ${data.buyer_percentage.toFixed(0)}%</span>
                     </div>
                 </div>
                 <div class="alert-buyers-bar-container">
@@ -715,7 +1028,7 @@
             alertsFeed.insertBefore(card, alertsFeed.firstChild);
             
             alertsList.unshift({ symbol: data.symbol, element: card });
-            alertCount.innerText = `${alertsList.length} алертів`;
+            alertCount.innerText = `${alertsList.length} ALERTS`;
 
             // Обмежуємо кількість алертів в DOM (макс. 20)
             if (alertsList.length > 20) {
@@ -796,7 +1109,6 @@
 
         // --- UPDATE ORDER BOOK DOM ---
         function updateOrderBook(data) {
-            // bids та asks мають формат [[price, qty], ...]
             const bids = data.bids || [];
             const asks = data.asks || [];
 
@@ -861,15 +1173,15 @@
             activePrice.innerText = price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
             if (lastPrice !== null) {
                 if (price > lastPrice) {
-                    activePrice.className = "selected-coin-price"; // Green
+                    activePrice.className = "selected-coin-price up-flash"; // Flash visual
                 } else if (price < lastPrice) {
-                    activePrice.className = "selected-coin-price down"; // Red
+                    activePrice.className = "selected-coin-price down-flash"; // Flash visual
                 }
             }
             lastPrice = price;
 
             // Візуальний індикатор угод (блимання зеленим/червоним при новій угоді)
-            tradeIndicator.style.background = isBuy ? "var(--accent-green)" : "var(--accent-red)";
+            tradeIndicator.style.background = isBuy ? "var(--color-green)" : "var(--color-red)";
             setTimeout(() => {
                 tradeIndicator.style.background = "transparent";
             }, 100);
