@@ -43,7 +43,7 @@ SL_PERCENT = 0.002         # Стоп-лосс: 0.2%
 TP_PERCENT = 0.005         # Тейк-профіт: 0.5%
 TRADE_QTY = 100            # Розмір позиції в монетах
 
-LOCAL_WS_HOST = os.getenv("LOCAL_WS_HOST", "0.0.0.0")
+LOCAL_WS_HOST = "0.0.0.0"
 LOCAL_WS_PORT = int(os.getenv("LOCAL_WS_PORT", 8765))
 
 # Налаштування кодування консолі для Windows
