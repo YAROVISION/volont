@@ -964,7 +964,12 @@
 
     <script>
         // --- CONFIG & GLOBAL STATE ---
-        const LOCAL_WS_URL = "ws://localhost:8765";
+        const getWsUrl = () => {
+            if (window.location.protocol === 'file:') return "ws://localhost:8765";
+            const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            return `${proto}//${window.location.hostname}:8765`;
+        };
+        const LOCAL_WS_URL = getWsUrl();
         let localWs = null;
         let binanceWs = null;
         let selectedSymbol = "BTCUSDT";

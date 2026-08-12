@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: volont-backend
+    restart: always
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - TIGERTRADE_API_KEY=${TIGERTRADE_API_KEY}
+      - TIGERTRADE_SECRET_KEY=${TIGERTRADE_SECRET_KEY}
+      - TIGERTRADE_SERVER_URL=${TIGERTRADE_SERVER_URL:-http://127.0.0.1:8989}
+    ports:
+      - "8765:8765"
+    networks:
+      - volont-net
+
+  frontend:
+    image: nginx:alpine
+    container_name: volont-frontend
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+    networks:
+      - volont-net
+
+networks:
+  volont-net:
+    driver: bridge
