@@ -484,6 +484,42 @@
             gap: 10px;
         }
 
+        .btn-go {
+            background-color: #ff2a2a;
+            color: #ffffff;
+            border: 1px solid #cc0000;
+            font-family: var(--font-tech);
+            font-size: 0.85rem;
+            font-weight: 800;
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            letter-spacing: 0.05em;
+            box-shadow: 0 2px 8px rgba(255, 42, 42, 0.4);
+            transition: all 0.15s ease-in-out;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-transform: uppercase;
+        }
+
+        .btn-go:hover {
+            background-color: #ff0000;
+            transform: translateY(-1px) scale(1.05);
+            box-shadow: 0 4px 12px rgba(255, 0, 0, 0.6);
+        }
+
+        .btn-go:active {
+            transform: translateY(0) scale(0.97);
+        }
+
+        .btn-go.btn-bot-active {
+            background-color: #00b862 !important;
+            border-color: #00ff88 !important;
+            box-shadow: 0 0 14px rgba(0, 255, 136, 0.8) !important;
+            animation: pulse-green 2s infinite;
+        }
+
         .selected-coin-price {
             font-family: var(--font-mono);
             font-size: 1.7rem;
@@ -867,6 +903,7 @@
                 <div class="coin-details-bar">
                     <div class="selected-coin-title">
                         <span id="activeSymbol">BTCUSDT</span>
+                        <button id="goBtn" class="btn-go" onclick="toggleBotForActiveSymbol()" title="Запустити / Зупинити торговий бот TigerTrade Order Flow">GO!</button>
                     </div>
                     <div class="selected-coin-price" id="activePrice">--.--</div>
                 </div>
@@ -974,11 +1011,61 @@
                     const message = JSON.parse(event.data);
                     if (message.type === "alert") {
                         handleIncomingAlert(message.data);
+                    } else if (message.type === "bot_status") {
+                        if (message.symbol === selectedSymbol) {
+                            updateBotButtonUI(message.is_active);
+                        }
+                    } else if (message.type === "bot_execution") {
+                        handleBotExecution(message.data);
                     }
                 } catch (e) {
                     console.error("Помилка обробки повідомлення локального сервера:", e);
                 }
             };
+        }
+
+        // --- TOGGLE TIGERTRADE ORDER FLOW BOT ---
+        function toggleBotForActiveSymbol() {
+            if (!localWs || localWs.readyState !== WebSocket.OPEN) {
+                alert("Локальний сервер `server.py` не підключено! Спочатку запустіть бекенд.");
+                return;
+            }
+            localWs.send(JSON.stringify({
+                type: "toggle_bot",
+                symbol: selectedSymbol
+            }));
+        }
+
+        // --- UPDATE GO! BUTTON STATE IN UI ---
+        function updateBotButtonUI(isActive) {
+            const goBtn = document.getElementById("goBtn");
+            if (!goBtn) return;
+            if (isActive) {
+                goBtn.innerText = "BOT: RUNNING 🟢";
+                goBtn.classList.add("btn-bot-active");
+                goBtn.title = "Торговий бот TigerTrade АКТИВНИЙ! Натисніть, щоб зупинити.";
+            } else {
+                goBtn.innerText = "GO!";
+                goBtn.classList.remove("btn-bot-active");
+                goBtn.title = "Натисніть, щоб запустити торговий бот TigerTrade Order Flow";
+            }
+        }
+
+        // --- DISPLAY BOT ORDER EXECUTION ---
+        function handleBotExecution(data) {
+            console.log("⚡ BOT EXECUTION:", data);
+            const row = document.createElement("div");
+            row.className = "trade-row trade-buy";
+            row.style.background = "rgba(0, 255, 136, 0.15)";
+            row.style.borderLeft = "3px solid #00ff88";
+            row.innerHTML = `
+                <span style="font-weight:bold;">🤖 [TIGER] ${data.side} ${data.type}</span>
+                <span>Qty: ${data.qty} @ ${data.price}</span>
+                <span class="trade-time">${new Date().toLocaleTimeString()}</span>
+            `;
+            if (tradesFeed) {
+                tradesFeed.insertBefore(row, tradesFeed.firstChild);
+            }
         }
 
         // --- HANDLE INCOMING VOLUME SURGE ALERT ---
@@ -1069,6 +1156,25 @@
 
             // Перепідключаємо Binance WS
             connectBinanceStreams(symbol);
+
+            // Запитуємо статус бота для обраної монети
+            if (localWs && localWs.readyState === WebSocket.OPEN) {
+                localWs.send(JSON.stringify({
+                    type: "get_bot_status",
+                    symbol: symbol
+                }));
+            }
+        }
+
+        // --- OPEN BINANCE TRADE PAGE ---
+        function openBinanceTrade() {
+            const symbol = selectedSymbol || 'BTCUSDT';
+            let pair = symbol;
+            if (symbol.endsWith('USDT')) {
+                const base = symbol.slice(0, -4);
+                pair = `${base}_USDT`;
+            }
+            window.open(`https://www.binance.com/en/trade/${pair}`, '_blank');
         }
 
         // --- CONNECT BINANCE WEBSOCKET FOR THE SELECTED COIN ---

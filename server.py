@@ -9,6 +9,12 @@ from typing import Dict, Set
 import httpx
 import websockets
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
+
 # --- НАЛАШТУВАННЯ / CONFIGURATION ---
 # Telegram settings (можна також передати через змінні оточення)
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "YOUR_TELEGRAM_BOT_TOKEN")
@@ -17,6 +23,22 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "YOUR_CHAT_ID")
 COOLDOWN_MINUTES = 5
 MIN_VOLUME_USD = 10000  # Ігнорувати монети з хвилинним об'ємом менше $10k
 MIN_HISTORY_MINUTES = 5  # Мінімальна кількість хвилин історії для розрахунку базового рівня
+MIN_INCREASE_PCT = 100.0  # Мінімальний відсоток зростання об'єму для аномалії (+100% / у 2+ рази)
+
+# --- TIGERTRADE & TRADING BOT PARAMETERS ---
+TIGERTRADE_API_KEY = os.getenv("TIGERTRADE_API_KEY", "YOUR_TIGERTRADE_API_KEY")
+TIGERTRADE_SECRET_KEY = os.getenv("TIGERTRADE_SECRET_KEY", "YOUR_TIGERTRADE_SECRET_KEY")
+TIGERTRADE_SERVER_URL = os.getenv("TIGERTRADE_SERVER_URL", "http://127.0.0.1:8989")
+
+VOL_THRESHOLD_MULT = 5.0   # Сплеск об'єму в 5 разів вище середнього
+DELTA_BUY_RATIO = 0.80     # 80%+ покупок
+LOOKBACK_WINDOW_SEC = 10   # Вікно аналізу аномалії (сек)
+AVG_WINDOW_SEC = 900       # Вікно розрахунку середнього об'єму (15 хв)
+BOT_COOLDOWN_SEC = 180     # Таймаут після угоди (3 хвилини)
+
+SL_PERCENT = 0.002         # Стоп-лосс: 0.2%
+TP_PERCENT = 0.005         # Тейк-профіт: 0.5%
+TRADE_QTY = 100            # Розмір позиції в монетах
 
 LOCAL_WS_HOST = "localhost"
 LOCAL_WS_PORT = 8765
@@ -54,6 +76,145 @@ class CoinState:
 coins_data: Dict[str, CoinState] = {}
 # Множина активних підключень локального веб-сервера
 connected_clients: Set = set()
+
+# --- ORDER FLOW TRADING BOT (TIGERTRADE FADE STRATEGY) ---
+class OrderFlowBot:
+    def __init__(self, symbol: str):
+        self.symbol = symbol
+        self.trades = collections.deque()  # (timestamp, volume_usd, is_buy, price)
+        self.last_trade_time = 0
+        self.is_in_position = False
+        self.is_active = False
+
+    def add_trade(self, price: float, qty: float, is_buyer_maker: bool):
+        now = time.time()
+        volume_usd = price * qty
+        is_buy = not is_buyer_maker  # False = Market Buy
+        self.trades.append((now, volume_usd, is_buy, price))
+        self._cleanup(now)
+
+    def _cleanup(self, now: float):
+        while self.trades and self.trades[0][0] < now - AVG_WINDOW_SEC:
+            self.trades.popleft()
+
+    def get_metrics(self):
+        now = time.time()
+        trades_15m = list(self.trades)
+        if not trades_15m:
+            return 0, 0, 0, 0
+
+        total_vol_15m = sum(t[1] for t in trades_15m)
+        avg_10s_vol = (total_vol_15m / AVG_WINDOW_SEC) * LOOKBACK_WINDOW_SEC
+
+        recent_trades = [t for t in trades_15m if t[0] >= now - LOOKBACK_WINDOW_SEC]
+        recent_vol = sum(t[1] for t in recent_trades)
+        buy_vol = sum(t[1] for t in recent_trades if t[2])
+
+        buy_ratio = (buy_vol / recent_vol) if recent_vol > 0 else 0
+        latest_price = trades_15m[-1][3] if trades_15m else 0
+
+        return recent_vol, avg_10s_vol, buy_ratio, latest_price
+
+    async def send_tigertrade_order(self, side: str, order_type: str, qty: float, price: float = None):
+        endpoint = f"{TIGERTRADE_SERVER_URL}/api/v1/order"
+        headers = {
+            "Content-Type": "application/json",
+            "X-API-KEY": TIGERTRADE_API_KEY
+        }
+        
+        payload = {
+            "symbol": self.symbol,
+            "side": side,
+            "type": order_type,
+            "quantity": qty,
+            "timestamp": int(time.time() * 1000)
+        }
+        if price:
+            payload["price"] = price
+            payload["timeInForce"] = "GTC"
+
+        logger.info(f"[TIGERTRADE BOT EXECUTION] {self.symbol} | {side} {order_type} Qty: {qty} Price: {price if price else 'MARKET'}")
+
+        exec_event = {
+            "type": "bot_execution",
+            "data": {
+                "symbol": self.symbol,
+                "side": side,
+                "type": order_type,
+                "qty": qty,
+                "price": price or "MARKET",
+                "timestamp": time.time()
+            }
+        }
+        if connected_clients:
+            websockets.broadcast(connected_clients, json.dumps(exec_event))
+
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.post(endpoint, headers=headers, json=payload)
+                return response.json()
+        except Exception as e:
+            logger.warning(f"[TIGERTRADE API GATEWAY] Реєстрація ордера ({e}). Локально зареєстровано.")
+            return {"status": "executed_locally", "error": str(e)}
+
+    async def execute_fade_strategy(self, current_price: float):
+        self.is_in_position = True
+        self.last_trade_time = time.time()
+        
+        sl_price = round(current_price * (1 + SL_PERCENT), 6)
+        tp_price = round(current_price * (1 - TP_PERCENT), 6)
+
+        logger.info(f" >>> [FADE STRATEGY TRIGGERED] {self.symbol} | Short Entry: ${current_price} | Stop-Loss: ${sl_price} | Take-Profit: ${tp_price}")
+
+        # 1. Вхід у ШОРТ по ринку
+        await self.send_tigertrade_order("SELL", "MARKET", TRADE_QTY)
+
+        # 2. Захисний Stop-Loss
+        await self.send_tigertrade_order("BUY", "STOP_MARKET", TRADE_QTY, price=sl_price)
+
+        # 3. Take-Profit
+        await self.send_tigertrade_order("BUY", "TAKE_PROFIT_MARKET", TRADE_QTY, price=tp_price)
+
+        # Сповіщення в Telegram
+        if TELEGRAM_TOKEN and TELEGRAM_TOKEN != "YOUR_TELEGRAM_BOT_TOKEN":
+            tg_text = (
+                f"🤖 <b>TIGERTRADE BOT EXECUTION (FADE)</b>\n\n"
+                f"<b>Symbol:</b> #{self.symbol}\n"
+                f"<b>Entry (Short):</b> ${current_price:,.4f}\n"
+                f"<b>Stop-Loss:</b> ${sl_price:,.4f} (+{SL_PERCENT*100:.1f}%)\n"
+                f"<b>Take-Profit:</b> ${tp_price:,.4f} (-{TP_PERCENT*100:.1f}%)\n"
+                f"<b>Qty:</b> {TRADE_QTY}"
+            )
+            url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+            try:
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    await client.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": tg_text, "parse_mode": "HTML"})
+            except Exception:
+                pass
+
+    async def process_trade_tick(self, price: float, qty: float, is_buyer_maker: bool):
+        if not self.is_active:
+            return
+
+        self.add_trade(price, qty, is_buyer_maker)
+
+        now = time.time()
+        if self.is_in_position and (now - self.last_trade_time > BOT_COOLDOWN_SEC):
+            self.is_in_position = False
+            logger.info(f"[BOT] {self.symbol} Cooldown вийшов. Бот знову готовий до пошуку сигналів.")
+
+        if self.is_in_position:
+            return
+
+        recent_vol, avg_10s_vol, buy_ratio, latest_price = self.get_metrics()
+
+        if avg_10s_vol > 0 and recent_vol > (avg_10s_vol * VOL_THRESHOLD_MULT):
+            if buy_ratio >= DELTA_BUY_RATIO:
+                logger.info(f"[BOT SIGNAL DETECTED] {self.symbol} | 10s Vol: ${recent_vol:,.2f} | Avg 10s: ${avg_10s_vol:,.2f} | Buyers: {buy_ratio*100:.1f}%")
+                await self.execute_fade_strategy(latest_price)
+
+# Словник активних екземплярів ботів для кожної монети
+active_bots: Dict[str, OrderFlowBot] = {}
 
 # --- ТЕЛЕГРАМ СПОВІЩЕННЯ ---
 async def send_telegram_alert(symbol: str, price: float, current_vol: float, avg_vol: float, increase: float, buyer_pct: float):
@@ -104,6 +265,10 @@ async def process_trade(trade: dict):
 
     vol_usd = p * q
 
+    # Передаємо угоду активному OrderFlowBot для монети (якщо активовано з інтерфейсу)
+    if symbol in active_bots:
+        await active_bots[symbol].process_trade_tick(p, q, is_buyer_maker)
+
     if symbol not in coins_data:
         coins_data[symbol] = CoinState(symbol)
 
@@ -145,7 +310,8 @@ async def process_trade(trade: dict):
         # Розраховуємо збільшення
         if v_avg > 0:
             increase_ratio = v_curr / v_avg
-            if increase_ratio >= 1.10 and v_curr >= MIN_VOLUME_USD:
+            min_ratio = 1.0 + (MIN_INCREASE_PCT / 100.0)
+            if increase_ratio >= min_ratio and v_curr >= MIN_VOLUME_USD:
                 current_time = time.time()
                 # Перевірка таймауту (cooldown)
                 if current_time >= state.cooldown_until:
@@ -245,10 +411,40 @@ async def local_ws_handler(websocket):
     try:
         # Надсилаємо статус-привітання
         await websocket.send(json.dumps({"type": "status", "data": "connected"}))
-        # Тримаємо з'єднання відкритим
+        # Тримаємо з'єднання відкритим та приймаємо команду управління ботом від клієнта
         async for message in websocket:
-            # Нам не потрібно приймати повідомлення, але якщо вони прийдуть, логуємо
-            logger.debug(f"Отримано від клієнта {websocket.remote_address}: {message}")
+            try:
+                msg_obj = json.loads(message)
+                msg_type = msg_obj.get("type")
+                symbol = msg_obj.get("symbol", "").upper()
+
+                if msg_type == "toggle_bot" and symbol:
+                    if symbol not in active_bots:
+                        active_bots[symbol] = OrderFlowBot(symbol)
+                    
+                    bot = active_bots[symbol]
+                    bot.is_active = not bot.is_active
+
+                    logger.info(f"[TIGERTRADE BOT] {symbol}: {'АКТИВОВАНО 🟢' if bot.is_active else 'ЗУПИНЕНО 🔴'}")
+
+                    status_event = {
+                        "type": "bot_status",
+                        "symbol": symbol,
+                        "is_active": bot.is_active
+                    }
+                    if connected_clients:
+                        websockets.broadcast(connected_clients, json.dumps(status_event))
+
+                elif msg_type == "get_bot_status" and symbol:
+                    is_act = active_bots[symbol].is_active if symbol in active_bots else False
+                    await websocket.send(json.dumps({
+                        "type": "bot_status",
+                        "symbol": symbol,
+                        "is_active": is_act
+                    }))
+
+            except Exception as ex:
+                logger.error(f"Помилка обробки команд сокета: {ex}")
     except websockets.exceptions.ConnectionClosed:
         pass
     finally:
