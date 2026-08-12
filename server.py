@@ -6,6 +6,9 @@ import os
 import sys
 import time
 from typing import Dict, Set
+import hashlib
+import hmac
+import urllib.parse
 import httpx
 import websockets
 
@@ -116,25 +119,9 @@ class OrderFlowBot:
         return recent_vol, avg_10s_vol, buy_ratio, latest_price
 
     async def send_tigertrade_order(self, side: str, order_type: str, qty: float, price: float = None):
-        endpoint = f"{TIGERTRADE_SERVER_URL}/api/v1/order"
-        headers = {
-            "Content-Type": "application/json",
-            "X-API-KEY": TIGERTRADE_API_KEY
-        }
-        
-        payload = {
-            "symbol": self.symbol,
-            "side": side,
-            "type": order_type,
-            "quantity": qty,
-            "timestamp": int(time.time() * 1000)
-        }
-        if price:
-            payload["price"] = price
-            payload["timeInForce"] = "GTC"
+        server_url = TIGERTRADE_SERVER_URL.rstrip("/")
 
-        logger.info(f"[TIGERTRADE BOT EXECUTION] {self.symbol} | {side} {order_type} Qty: {qty} Price: {price if price else 'MARKET'}")
-
+        # Створюємо базові сповіщення для UI
         exec_event = {
             "type": "bot_execution",
             "data": {
@@ -149,13 +136,77 @@ class OrderFlowBot:
         if connected_clients:
             websockets.broadcast(connected_clients, json.dumps(exec_event))
 
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.post(endpoint, headers=headers, json=payload)
-                return response.json()
-        except Exception as e:
-            logger.warning(f"[TIGERTRADE API GATEWAY] Реєстрація ордера ({e}). Локально зареєстровано.")
-            return {"status": "executed_locally", "error": str(e)}
+        # Перевірка: Якщо вказано прямий Binance REST API (Futures, Spot чи Testnet)
+        is_binance_direct = "binance" in server_url.lower()
+
+        if is_binance_direct:
+            # Формуємо запит до Binance API з підписом HMAC SHA256
+            is_futures = "fapi" in server_url.lower() or "binancefuture" in server_url.lower()
+            endpoint_path = "/fapi/v1/order" if is_futures else "/api/v3/order"
+            url = f"{server_url}{endpoint_path}"
+
+            headers = {
+                "X-MBX-APIKEY": TIGERTRADE_API_KEY
+            }
+
+            params = {
+                "symbol": self.symbol,
+                "side": side,
+                "type": order_type,
+                "quantity": qty,
+                "timestamp": int(time.time() * 1000)
+            }
+            if price:
+                params["price"] = price
+                params["timeInForce"] = "GTC"
+
+            query_string = urllib.parse.urlencode(params)
+            signature = hmac.new(
+                TIGERTRADE_SECRET_KEY.encode("utf-8"),
+                query_string.encode("utf-8"),
+                hashlib.sha256
+            ).hexdigest()
+
+            full_url = f"{url}?{query_string}&signature={signature}"
+            logger.info(f"[BINANCE REST EXECUTION] {self.symbol} | {side} {order_type} Qty: {qty} Price: {price if price else 'MARKET'}")
+
+            try:
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    response = await client.post(full_url, headers=headers)
+                    res_json = response.json()
+                    logger.info(f"[BINANCE RESPONSE] Status: {response.status_code} | {res_json}")
+                    return res_json
+            except Exception as e:
+                logger.warning(f"[BINANCE API ERROR] {e}. Ордер зареєстровано локально.")
+                return {"status": "executed_locally", "error": str(e)}
+
+        else:
+            # Стандартне надсилання в TigerTrade Gateway API
+            endpoint = f"{server_url}/api/v1/order"
+            headers = {
+                "Content-Type": "application/json",
+                "X-API-KEY": TIGERTRADE_API_KEY
+            }
+            payload = {
+                "symbol": self.symbol,
+                "side": side,
+                "type": order_type,
+                "quantity": qty,
+                "timestamp": int(time.time() * 1000)
+            }
+            if price:
+                payload["price"] = price
+                payload["timeInForce"] = "GTC"
+
+            logger.info(f"[TIGERTRADE BOT EXECUTION] {self.symbol} | {side} {order_type} Qty: {qty} Price: {price if price else 'MARKET'}")
+
+            try:
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    response = await client.post(endpoint, headers=headers, json=payload)
+                    return response.json()
+            except Exception as e:
+                logger.warning(f"[TIGERTRADE GATEWAY ERROR] {e}. Ордер зареєстровано локально.")
+                return {"status": "executed_locally", "error": str(e)}
 
     async def execute_fade_strategy(self, current_price: float):
         self.is_in_position = True
