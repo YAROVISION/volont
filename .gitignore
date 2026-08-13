@@ -16,3 +16,7 @@ env/
 *.njsproj
 *.sln
 *.swp
+
+# Bot documentation
+bot_process.md
+
