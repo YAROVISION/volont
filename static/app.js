@@ -36,7 +36,10 @@ document.addEventListener('DOMContentLoaded', () => {
 // Setup local WebSocket connection
 function initLocalWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const host = window.location.host;
+    const wsUrl = (window.location.port === '' || window.location.port === '80' || window.location.port === '443')
+        ? `${protocol}//${host}/ws`
+        : `${protocol}//${window.location.hostname}:8765/ws`;
 
     ws = new WebSocket(wsUrl);
 

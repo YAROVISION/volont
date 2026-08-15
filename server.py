@@ -62,6 +62,7 @@ async def periodic_snapshot_broadcast():
 
 
 @routes.get('/ws')
+@routes.get('/ws/')
 async def websocket_handler(request):
     """WebSocket endpoint for frontend screener client."""
     ws = web.WebSocketResponse()
@@ -78,6 +79,7 @@ async def websocket_handler(request):
 
 
 @routes.get('/api/anomalies')
+@routes.get('/api/anomalies/')
 async def get_anomalies(request):
     """REST API endpoint to retrieve anomaly logs from SQLite."""
     symbol = request.query.get('symbol')

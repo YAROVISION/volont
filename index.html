@@ -929,13 +929,13 @@
     <script>
         // --- CONFIG & GLOBAL STATE ---
         const getWsUrl = () => {
-            if (window.location.protocol === 'file:') return "ws://localhost:8765";
+            if (window.location.protocol === 'file:') return "ws://localhost:8765/ws";
             const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            // Якщо відкриваємо під доменним іменем (наприклад volont.lexis.blog) без виділеного порту, підключаємося через /ws/
+            // Якщо відкриваємо під доменним іменем (наприклад volont.lexis.blog) без виділеного порту, підключаємося через /ws
             if (window.location.port === '' || window.location.port === '80' || window.location.port === '443') {
-                return `${proto}//${window.location.host}/ws/`;
+                return `${proto}//${window.location.host}/ws`;
             }
-            return `${proto}//${window.location.hostname}:8765`;
+            return `${proto}//${window.location.hostname}:8765/ws`;
         };
         const LOCAL_WS_URL = getWsUrl();
         let localWs = null;
