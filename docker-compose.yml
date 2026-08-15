@@ -12,6 +12,7 @@ services:
       - "8765:8765"
     networks:
       - volont-net
+      - traefik_default
 
   frontend:
     build:
