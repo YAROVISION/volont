@@ -33,3 +33,7 @@ WEIGHT_VOLA: float = 0.25     # Volatility component weight
 WEIGHT_TRADES: float = 0.15   # Trade density component weight
 WEIGHT_DEPTH: float = 0.15    # Orderbook depth component weight
 WEIGHT_PRICE: float = 0.10    # Sub-2$ price priority weight
+
+
+
+

@@ -31,6 +31,14 @@ class CoinState:
         self.last_surge_pct: float = 0.0
         self.last_volatility_pct: float = 0.0
 
+        # Full 1-minute completed summary indicators
+        self.last_completed_volume: float = 0.0
+        self.last_completed_trades: int = 0
+        self.last_completed_surge_pct: float = 0.0
+        self.last_completed_volatility_pct: float = 0.0
+        self.last_completed_score: float = 0.0
+        self.last_completed_density: float = 0.0
+
 
 class BinanceStreamManager:
     def __init__(self, on_anomaly_callback: Optional[Callable[[Dict], Awaitable[None]]] = None):
@@ -93,74 +101,81 @@ class BinanceStreamManager:
             coin.price_max_1m = price
 
     async def _process_minute_rollover(self, coin: CoinState, new_minute: int):
-        """Process minute rollover, calculate baseline surge, volatility & evaluate filters."""
-        if len(coin.history) >= 1:
-            avg_vol = sum(coin.history) / len(coin.history)
-            surge_pct = ((coin.current_volume - avg_vol) / avg_vol * 100.0) if avg_vol > 0 else 0.0
-            
-            p_min = coin.price_min_1m if coin.price_min_1m > 0 else coin.last_price
-            p_max = coin.price_max_1m if coin.price_max_1m > 0 else coin.last_price
-            volatility_pct = ((p_max - p_min) / p_min * 100.0) if p_min > 0 else 0.0
+        """Process minute rollover, calculate baseline surge, volatility & evaluate filters for full 1-minute summary."""
+        completed_vol = coin.current_volume
+        completed_trades = coin.trades_count_1m
 
-            coin.last_surge_pct = surge_pct
-            coin.last_volatility_pct = volatility_pct
+        avg_vol = (sum(coin.history) / len(coin.history)) if coin.history else completed_vol
+        surge_pct = ((completed_vol - avg_vol) / avg_vol * 100.0) if avg_vol > 0 else 0.0
 
-            # Estimate orderbook density heuristics if live depth not subscribed
-            if coin.orderbook_density_usd == 0.0:
-                coin.orderbook_density_usd = coin.current_volume * 0.15
+        p_min = coin.price_min_1m if coin.price_min_1m > 0 else coin.last_price
+        p_max = coin.price_max_1m if coin.price_max_1m > 0 else coin.last_price
+        volatility_pct = ((p_max - p_min) / p_min * 100.0) if p_min > 0 else 0.0
 
-            # Check Hard Filters
-            passes_filters = scoring.check_hard_filters(surge_pct, volatility_pct, coin.current_volume)
-            
-            if passes_filters:
-                score, metrics = scoring.calculate_score(
-                    surge_pct,
-                    volatility_pct,
-                    coin.trades_count_1m,
-                    coin.orderbook_density_usd,
-                    coin.last_price
+        density = coin.orderbook_density_usd if coin.orderbook_density_usd > 0 else (completed_vol * 0.15)
+
+        score, metrics = scoring.calculate_score(
+            surge_pct,
+            volatility_pct,
+            completed_trades,
+            density,
+            coin.last_price
+        )
+
+        # Save completed 1-minute summary metrics
+        coin.last_completed_volume = completed_vol
+        coin.last_completed_trades = completed_trades
+        coin.last_completed_surge_pct = surge_pct
+        coin.last_completed_volatility_pct = volatility_pct
+        coin.last_completed_score = score
+        coin.last_completed_density = density
+        coin.current_score = score
+        coin.last_surge_pct = surge_pct
+        coin.last_volatility_pct = volatility_pct
+
+        # Check Hard Filters
+        passes_filters = scoring.check_hard_filters(surge_pct, volatility_pct, completed_vol)
+
+        if passes_filters:
+            now = time.time()
+            if now >= coin.cooldown_until:
+                coin.cooldown_until = now + (config.COOLDOWN_MINUTES * 60.0)
+
+                # Log to database WAL
+                row_id = await db_manager.log_anomaly(
+                    symbol=coin.symbol,
+                    price=coin.last_price,
+                    volume_surge_pct=round(surge_pct, 2),
+                    volatility_pct=round(volatility_pct, 2),
+                    trades_count=completed_trades,
+                    orderbook_density=round(density, 2),
+                    calculated_score=score
                 )
-                coin.current_score = score
 
-                now = time.time()
-                if now >= coin.cooldown_until:
-                    coin.cooldown_until = now + (config.COOLDOWN_MINUTES * 60.0)
+                anomaly_data = {
+                    "id": row_id,
+                    "symbol": coin.symbol,
+                    "price": coin.last_price,
+                    "volume_surge_pct": round(surge_pct, 2),
+                    "volatility_pct": round(volatility_pct, 2),
+                    "trades_count": completed_trades,
+                    "orderbook_density": round(density, 2),
+                    "score": score,
+                    "current_volume": round(completed_vol, 2),
+                    "avg_volume": round(avg_vol, 2),
+                    "metrics": metrics,
+                    "timestamp": time.strftime("%H:%M:%S")
+                }
 
-                    # Log to database WAL
-                    row_id = await db_manager.log_anomaly(
-                        symbol=coin.symbol,
-                        price=coin.last_price,
-                        volume_surge_pct=round(surge_pct, 2),
-                        volatility_pct=round(volatility_pct, 2),
-                        trades_count=coin.trades_count_1m,
-                        orderbook_density=round(coin.orderbook_density_usd, 2),
-                        calculated_score=score
-                    )
+                logger.info(f"🚨 [ANOMALY] {coin.symbol} | Score: {score} | Surge: +{surge_pct:.1f}% | Volatility: {volatility_pct:.1f}%")
 
-                    anomaly_data = {
-                        "id": row_id,
-                        "symbol": coin.symbol,
-                        "price": coin.last_price,
-                        "volume_surge_pct": round(surge_pct, 2),
-                        "volatility_pct": round(volatility_pct, 2),
-                        "trades_count": coin.trades_count_1m,
-                        "orderbook_density": round(coin.orderbook_density_usd, 2),
-                        "score": score,
-                        "current_volume": round(coin.current_volume, 2),
-                        "avg_volume": round(avg_vol, 2),
-                        "metrics": metrics,
-                        "timestamp": time.strftime("%H:%M:%S")
-                    }
-
-                    logger.info(f"🚨 [ANOMALY] {coin.symbol} | Score: {score} | Surge: +{surge_pct:.1f}% | Volatility: {volatility_pct:.1f}%")
-
-                    if self.on_anomaly_callback:
-                        await self.on_anomaly_callback(anomaly_data)
+                if self.on_anomaly_callback:
+                    await self.on_anomaly_callback(anomaly_data)
 
         # Push completed minute volume to history deque
-        coin.history.append(coin.current_volume)
+        coin.history.append(completed_vol)
 
-        # Reset minute counters
+        # Reset minute counters for the next minute
         coin.current_volume = 0.0
         coin.buyer_volume = 0.0
         coin.trades_count_1m = 0
@@ -197,7 +212,7 @@ class BinanceStreamManager:
         """Fetch symbols and launch WebSocket connection tasks in chunks."""
         self.running = True
         symbols = await self.fetch_usdt_symbols()
-        
+
         # Initialize CoinState objects
         for s in symbols:
             self.coins[s] = CoinState(s)
@@ -218,36 +233,35 @@ class BinanceStreamManager:
         await asyncio.gather(*self._tasks, return_exceptions=True)
 
     def get_leaderboard_snapshot(self) -> List[Dict]:
-        """Return leaderboard snapshot of all coins sorted by Score."""
+        """Return leaderboard snapshot of full completed 1-minute summary for all coins sorted by Score."""
         snapshot = []
         for s, coin in self.coins.items():
             if coin.last_price > 0:
-                # Instant scoring calculation for live view
-                avg_vol = (sum(coin.history) / len(coin.history)) if coin.history else coin.current_volume
-                surge_pct = ((coin.current_volume - avg_vol) / avg_vol * 100.0) if avg_vol > 0 else 0.0
-                
-                p_min = coin.price_min_1m if coin.price_min_1m > 0 else coin.last_price
-                p_max = coin.price_max_1m if coin.price_max_1m > 0 else coin.last_price
-                volatility_pct = ((p_max - p_min) / p_min * 100.0) if p_min > 0 else 0.0
-
-                density = coin.orderbook_density_usd if coin.orderbook_density_usd > 0 else coin.current_volume * 0.15
-
-                score, metrics = scoring.calculate_score(
-                    surge_pct,
-                    volatility_pct,
-                    coin.trades_count_1m,
-                    density,
-                    coin.last_price
-                )
+                # Use completed full 1-minute summary metrics if available, otherwise calculate current
+                if coin.last_completed_volume > 0 or coin.last_completed_trades > 0 or coin.last_completed_score > 0:
+                    surge_pct = coin.last_completed_surge_pct
+                    volatility_pct = coin.last_completed_volatility_pct
+                    trades_count = coin.last_completed_trades
+                    density = coin.last_completed_density
+                    score = coin.last_completed_score
+                else:
+                    avg_vol = (sum(coin.history) / len(coin.history)) if coin.history else coin.current_volume
+                    surge_pct = ((coin.current_volume - avg_vol) / avg_vol * 100.0) if avg_vol > 0 else 0.0
+                    p_min = coin.price_min_1m if coin.price_min_1m > 0 else coin.last_price
+                    p_max = coin.price_max_1m if coin.price_max_1m > 0 else coin.last_price
+                    volatility_pct = ((p_max - p_min) / p_min * 100.0) if p_min > 0 else 0.0
+                    density = coin.orderbook_density_usd if coin.orderbook_density_usd > 0 else coin.current_volume * 0.15
+                    trades_count = coin.trades_count_1m
+                    score, _ = scoring.calculate_score(surge_pct, volatility_pct, trades_count, density, coin.last_price)
 
                 snapshot.append({
                     "symbol": s,
                     "price": coin.last_price,
                     "volume_surge_pct": round(surge_pct, 1),
                     "volatility_pct": round(volatility_pct, 1),
-                    "trades_count": coin.trades_count_1m,
+                    "trades_count": trades_count,
                     "orderbook_density": round(density, 1),
-                    "score": score,
+                    "score": round(score, 1),
                     "is_under_2usd": coin.last_price <= config.PRICE_PRIORITY_THRESHOLD
                 })
 

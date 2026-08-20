@@ -12,7 +12,7 @@ let directBinanceWs = null;
 let sortColumn = 'score';
 let sortDirection = 'desc';
 
-// DOM Elements
+// DOM Elements - Screener
 const leaderboardBody = document.getElementById('leaderboard-body');
 const searchInput = document.getElementById('search-input');
 const pairsCountEl = document.getElementById('pairs-count');
@@ -57,6 +57,8 @@ function initLocalWebSocket() {
                 renderLeaderboard();
             } else if (data.type === 'anomaly') {
                 handleNewAnomalyAlert(data.data);
+            } else if (data.type === 'emergency_alert') {
+                handleEmergencyAlertPush(data.data);
             }
         } catch (e) {
             console.error('WS Message Parse Error:', e);
@@ -73,38 +75,46 @@ function initLocalWebSocket() {
     };
 }
 
-// Setup Event Listeners
+// Setup Event Listeners for Screener
 function setupFilterEvents() {
-    document.getElementById('btn-filter-all').addEventListener('click', (e) => {
-        setActiveFilterButton(e.target);
-        currentFilter = 'all';
-        renderLeaderboard();
-    });
+    if (document.getElementById('btn-filter-all')) {
+        document.getElementById('btn-filter-all').addEventListener('click', (e) => {
+            setActiveFilterButton(e.target);
+            currentFilter = 'all';
+            renderLeaderboard();
+        });
+    }
 
-    document.getElementById('btn-filter-under2').addEventListener('click', (e) => {
-        setActiveFilterButton(e.target);
-        currentFilter = 'under2';
-        renderLeaderboard();
-    });
+    if (document.getElementById('btn-filter-under2')) {
+        document.getElementById('btn-filter-under2').addEventListener('click', (e) => {
+            setActiveFilterButton(e.target);
+            currentFilter = 'under2';
+            renderLeaderboard();
+        });
+    }
 
-    document.getElementById('btn-filter-topscore').addEventListener('click', (e) => {
-        setActiveFilterButton(e.target);
-        currentFilter = 'topscore';
-        renderLeaderboard();
-    });
+    if (document.getElementById('btn-filter-topscore')) {
+        document.getElementById('btn-filter-topscore').addEventListener('click', (e) => {
+            setActiveFilterButton(e.target);
+            currentFilter = 'topscore';
+            renderLeaderboard();
+        });
+    }
 
-    searchInput.addEventListener('input', (e) => {
-        searchKeyword = e.target.value.trim().toUpperCase();
-        renderLeaderboard();
-    });
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            searchKeyword = e.target.value.trim().toUpperCase();
+            renderLeaderboard();
+        });
+    }
 }
 
 function setActiveFilterButton(activeBtn) {
     ['btn-filter-all', 'btn-filter-under2', 'btn-filter-topscore'].forEach(id => {
         const btn = document.getElementById(id);
-        btn.className = 'bg-darkCard border border-darkBorder text-slate-400 hover:bg-slate-800 text-xs px-3 py-1.5 rounded transition';
+        if (btn) btn.className = 'bg-darkCard border border-darkBorder text-slate-400 hover:bg-slate-800 text-xs px-3 py-1.5 rounded transition';
     });
-    activeBtn.className = 'bg-binanceYellow text-black font-semibold text-xs px-3 py-1.5 rounded transition';
+    if (activeBtn) activeBtn.className = 'bg-binanceYellow text-black font-semibold text-xs px-3 py-1.5 rounded transition';
 }
 
 // Handle Column Sort
@@ -232,20 +242,23 @@ function handleNewAnomalyAlert(anomaly) {
     }
 }
 
-// Inspect Selected Symbol (Order Book, Trade Tape, SQLite History)
+function handleEmergencyAlertPush(alertData) {
+    if (currentView === 'ace') {
+        loadAceStats();
+    }
+}
+
+// Inspect Selected Symbol
 function inspectSymbol(symbol) {
     inspectedSymbol = symbol;
-    inspectorTitle.innerHTML = `ASSET INSPECTOR: <span class="text-binanceYellow">${symbol}</span>`;
+    if (inspectorTitle) inspectorTitle.innerHTML = `ASSET INSPECTOR: <span class="text-binanceYellow">${symbol}</span>`;
     
-    // Find current price in leaderboard
     const found = leaderboardData.find(c => c.symbol === symbol);
     if (found) {
         inspectedPrice = found.price;
-        inspectorPriceBadge.innerText = inspectedPrice < 1.0 ? `$${inspectedPrice.toFixed(6)}` : `$${inspectedPrice.toFixed(4)}`;
-        if (found.is_under_2usd) {
-            inspectorUnder2Badge.style.display = 'inline-block';
-        } else {
-            inspectorUnder2Badge.style.display = 'none';
+        if (inspectorPriceBadge) inspectorPriceBadge.innerText = inspectedPrice < 1.0 ? `$${inspectedPrice.toFixed(6)}` : `$${inspectedPrice.toFixed(4)}`;
+        if (inspectorUnder2Badge) {
+            inspectorUnder2Badge.style.display = found.is_under_2usd ? 'inline-block' : 'none';
         }
     }
 
@@ -254,7 +267,7 @@ function inspectSymbol(symbol) {
     fetchSqliteAnomalyLogs(symbol);
 }
 
-// Direct Binance WS Connection for Inspector (Depth & Trade Tape)
+// Direct Binance WS Connection for Inspector
 function connectDirectBinanceWs(symbol) {
     if (directBinanceWs) {
         directBinanceWs.close();
@@ -265,7 +278,7 @@ function connectDirectBinanceWs(symbol) {
 
     directBinanceWs = new WebSocket(url);
 
-    tradeTapeBody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-slate-500">Streaming trades...</td></tr>';
+    if (tradeTapeBody) tradeTapeBody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-slate-500">Streaming trades...</td></tr>';
 
     directBinanceWs.onmessage = (event) => {
         try {
@@ -283,6 +296,7 @@ function connectDirectBinanceWs(symbol) {
 
 // Render Trade Tape
 function renderTradeTapeRow(trade) {
+    if (!tradeTapeBody) return;
     const price = float(trade.p);
     const qty = float(trade.q);
     const isSell = trade.m;
@@ -308,6 +322,7 @@ function renderTradeTapeRow(trade) {
 
 // Render Order Book Depth (±1%)
 function renderOrderBookDepth(depth) {
+    if (!bidsList || !asksList) return;
     let bidsHtml = '';
     let asksHtml = '';
 
@@ -344,7 +359,7 @@ function renderOrderBookDepth(depth) {
 async function fetchSqliteAnomalyLogs(symbol) {
     try {
         const resp = await fetch(`/api/anomalies?symbol=${symbol}&limit=10`);
-        if (resp.ok) {
+        if (resp.ok && sqliteLogsBody) {
             const logs = await resp.json();
             if (logs.length === 0) {
                 sqliteLogsBody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-slate-500">No anomaly history recorded yet in SQLite.</td></tr>';
@@ -368,6 +383,20 @@ async function fetchSqliteAnomalyLogs(symbol) {
     } catch (e) {
         console.error('Fetch SQLite Anomaly Logs Error:', e);
     }
+}
+
+
+// Utility Formatters
+function formatMoney(val) {
+    if (val >= 1e6) return `${(val / 1e6).toFixed(2)}M`;
+    if (val >= 1e3) return `${(val / 1e3).toFixed(1)}K`;
+    return val.toFixed(2);
+}
+
+function formatNum(val) {
+    if (val >= 1e6) return `${(val / 1e6).toFixed(2)}M`;
+    if (val >= 1e3) return `${(val / 1e3).toFixed(1)}K`;
+    return val.toLocaleString();
 }
 
 function float(val) {

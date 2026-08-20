@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Binance Anomaly Radar // Real-Time Scoring Screener</title>
+    <title>Binance Anomaly Radar // Real-Time Screener & ACEUSDT Analytics</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -34,17 +34,24 @@
 <body class="bg-darkBg text-slate-200 min-h-screen flex flex-col antialiased selection:bg-binanceYellow selection:text-black">
 
     <!-- 1. HEADER & CONTROL BAR -->
-    <header class="bg-darkHeader border-b border-darkBorder px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-30 shadow-lg">
+    <header class="bg-darkHeader border-b border-darkBorder px-6 py-3 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-30 shadow-lg">
         <div class="flex items-center gap-4">
             <div class="flex items-center gap-2">
                 <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse glow-emerald"></span>
-                <span class="font-bold text-lg tracking-wider text-white flex items-center gap-2">
+                <span class="font-bold text-lg tracking-wider text-white flex items-center gap-2 font-mono">
                     ⚡ BINANCE ANOMALY RADAR
                 </span>
             </div>
-            <span class="text-xs bg-darkBorder/60 px-2.5 py-1 rounded text-slate-400 font-mono border border-slate-700">
-                REAL-TIME SCORE SCREENER
-            </span>
+            <!-- Navigation Tabs -->
+            <div class="flex items-center gap-1.5 bg-darkBg border border-darkBorder p-1 rounded-lg">
+                <button id="nav-btn-screener" class="px-3.5 py-1.5 text-xs font-bold font-mono rounded transition flex items-center gap-2 bg-binanceYellow text-black shadow">
+                    ⚡ REAL-TIME RADAR
+                </button>
+                <a href="/urgent" id="nav-btn-urgent" class="px-3.5 py-1.5 text-xs font-bold font-mono rounded transition flex items-center gap-2 bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30">
+                    🚨 ТЕРМІНОВО!
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                </a>
+            </div>
         </div>
 
         <!-- Metrics Counters -->
@@ -63,8 +70,8 @@
             </div>
         </div>
 
-        <!-- Search & Quick Filters -->
-        <div class="flex items-center gap-3">
+        <!-- Search & Quick Filters (For Screener View) -->
+        <div id="screener-filters" class="flex items-center gap-3">
             <div class="relative">
                 <input type="text" id="search-input" placeholder="Search Symbol (e.g. PEPE)..."
                     class="bg-darkCard border border-darkBorder rounded px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-binanceYellow w-48 font-mono">
@@ -86,153 +93,136 @@
     <!-- MAIN CONTENT CONTAINER -->
     <main class="flex-1 px-6 py-5 flex flex-col gap-6 max-w-[1920px] mx-auto w-full">
 
-        <!-- 2. MAIN LIVE LEADERBOARD TABLE -->
-        <section class="bg-darkCard border border-darkBorder rounded-lg shadow-xl overflow-hidden flex flex-col">
-            <div class="px-5 py-3.5 border-b border-darkBorder flex justify-between items-center bg-darkHeader/50">
-                <h2 class="font-bold text-sm text-slate-100 flex items-center gap-2">
-                    🏆 LIVE ANOMALY LEADERBOARD
-                </h2>
-                <span class="text-xs text-slate-400 font-mono">Auto-sorted by Score • Updated 3x/sec</span>
-            </div>
-
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-xs font-mono">
-                    <thead>
-                        <tr class="bg-darkHeader/80 text-slate-400 border-b border-darkBorder select-none">
-                            <th class="py-3 px-4 font-semibold w-12 text-center">#</th>
-                            <th class="py-3 px-4 font-semibold cursor-pointer hover:text-binanceYellow transition" onclick="handleSort('symbol')">
-                                SYMBOL <span id="sort-icon-symbol" class="text-[10px] text-slate-500"></span>
-                            </th>
-                            <th class="py-3 px-4 font-semibold cursor-pointer hover:text-binanceYellow transition" onclick="handleSort('price')">
-                                PRICE <span id="sort-icon-price" class="text-[10px] text-slate-500"></span>
-                            </th>
-                            <th class="py-3 px-4 font-semibold min-w-[180px] cursor-pointer hover:text-binanceYellow transition" onclick="handleSort('volume_surge_pct')">
-                                VOL SURGE (%) <span id="sort-icon-volume_surge_pct" class="text-[10px] text-slate-500"></span>
-                            </th>
-                            <th class="py-3 px-4 font-semibold cursor-pointer hover:text-binanceYellow transition" onclick="handleSort('volatility_pct')">
-                                VOLATILITY (%) <span id="sort-icon-volatility_pct" class="text-[10px] text-slate-500"></span>
-                            </th>
-                            <th class="py-3 px-4 font-semibold cursor-pointer hover:text-binanceYellow transition" onclick="handleSort('trades_count')">
-                                TRADES/M <span id="sort-icon-trades_count" class="text-[10px] text-slate-500"></span>
-                            </th>
-                            <th class="py-3 px-4 font-semibold cursor-pointer hover:text-binanceYellow transition" onclick="handleSort('orderbook_density')">
-                                OB DENSITY <span id="sort-icon-orderbook_density" class="text-[10px] text-slate-500"></span>
-                            </th>
-                            <th class="py-3 px-4 font-semibold cursor-pointer hover:text-binanceYellow transition" onclick="handleSort('score')">
-                                SCORE <span id="sort-icon-score" class="text-[10px] text-binanceYellow">▼</span>
-                            </th>
-                            <th class="py-3 px-4 font-semibold text-center w-24">ACTION</th>
-                        </tr>
-                    </thead>
-                    <tbody id="leaderboard-body" class="divide-y divide-darkBorder/60">
-                        <!-- Dynamic Rows injected via JS -->
-                        <tr>
-                            <td colspan="9" class="py-8 text-center text-slate-500 font-mono">
-                                Connecting to Binance WebSocket streams...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- 3. ASSET INSPECTOR PANEL -->
-        <section id="inspector-panel" class="bg-darkCard border border-darkBorder rounded-lg shadow-2xl p-5 flex flex-col gap-4">
-            <div class="flex justify-between items-center border-b border-darkBorder pb-3">
-                <div class="flex items-center gap-3">
-                    <h3 id="inspector-title" class="text-base font-bold text-white tracking-wide">
-                        ASSET INSPECTOR: <span class="text-binanceYellow">PEPEUSDT</span>
-                    </h3>
-                    <span id="inspector-price-badge" class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs px-2.5 py-0.5 rounded font-mono">
-                        $0.00001200
-                    </span>
-                    <span id="inspector-under2-badge" class="bg-emerald-500 text-black text-[10px] font-bold px-2 py-0.5 rounded">
-                        &lt;$2 BOOST ACTIVE
-                    </span>
-                </div>
-                <span class="text-xs text-slate-400 font-mono">Click any coin row to inspect</span>
-            </div>
-
-            <!-- Inspector Grid: 3 Sections -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                
-                <!-- 1. Order Book Depth -->
-                <div class="bg-darkBg border border-darkBorder rounded-lg p-4 flex flex-col gap-3">
-                    <div class="flex justify-between items-center text-xs font-bold text-slate-300 border-b border-darkBorder pb-2">
-                        <span>ORDER BOOK DEPTH (±1%)</span>
-                        <span class="text-slate-500 text-[10px]">LIVE DENSITY</span>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3 text-xs font-mono">
-                        <!-- Bids (Buy) -->
-                        <div class="flex flex-col gap-1.5">
-                            <span class="text-binanceBuy font-bold text-[11px]">BIDS (BUY)</span>
-                            <div id="bids-list" class="flex flex-col gap-1">
-                                <!-- Bids rows -->
-                            </div>
-                        </div>
-                        <!-- Asks (Sell) -->
-                        <div class="flex flex-col gap-1.5">
-                            <span class="text-binanceSell font-bold text-[11px]">ASKS (SELL)</span>
-                            <div id="asks-list" class="flex flex-col gap-1">
-                                <!-- Asks rows -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2. Live Trade Tape -->
-                <div class="bg-darkBg border border-darkBorder rounded-lg p-4 flex flex-col gap-3">
-                    <div class="flex justify-between items-center text-xs font-bold text-slate-300 border-b border-darkBorder pb-2">
-                        <span>LIVE TRADE TAPE</span>
-                        <span class="text-binanceBuy text-[10px] flex items-center gap-1">
-                            <span class="w-2 h-2 rounded-full bg-binanceBuy animate-ping"></span> STREAMING
+        <!-- ================= VIEW 1: MAIN MARKET SCREENER ================= -->
+        <div id="view-screener" class="flex flex-col gap-6">
+            <!-- 1. ASSET INSPECTOR PANEL -->
+            <section id="inspector-panel" class="bg-darkCard border border-darkBorder rounded-lg shadow-2xl p-5 flex flex-col gap-4">
+                <div class="flex justify-between items-center border-b border-darkBorder pb-3">
+                    <div class="flex items-center gap-3">
+                        <h3 id="inspector-title" class="text-base font-bold text-white tracking-wide">
+                            ASSET INSPECTOR: <span class="text-binanceYellow">PEPEUSDT</span>
+                        </h3>
+                        <span id="inspector-price-badge" class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs px-2.5 py-0.5 rounded font-mono">
+                            $0.00001200
+                        </span>
+                        <span id="inspector-under2-badge" class="bg-emerald-500 text-black text-[10px] font-bold px-2 py-0.5 rounded">
+                            &lt;$2 BOOST ACTIVE
                         </span>
                     </div>
-
-                    <div class="overflow-y-auto max-h-[220px] pr-1">
-                        <table class="w-full text-xs font-mono text-left">
-                            <thead class="text-slate-500 border-b border-darkBorder/50">
-                                <tr>
-                                    <th class="pb-1">TIME</th>
-                                    <th class="pb-1">PRICE</th>
-                                    <th class="pb-1">QTY</th>
-                                    <th class="pb-1 text-right">SIDE</th>
-                                </tr>
-                            </thead>
-                            <tbody id="trade-tape-body" class="divide-y divide-darkBorder/30">
-                                <!-- Dynamic trade tape rows -->
-                            </tbody>
-                        </table>
-                    </div>
+                    <span class="text-xs text-slate-400 font-mono">Click any coin row to inspect</span>
                 </div>
 
-                <!-- 3. SQLite Database Anomaly History -->
-                <div class="bg-darkBg border border-darkBorder rounded-lg p-4 flex flex-col gap-3">
-                    <div class="flex justify-between items-center text-xs font-bold text-slate-300 border-b border-darkBorder pb-2">
-                        <span>SQLITE ANOMALY LOGS</span>
-                        <span class="text-blue-400 text-[10px] font-mono">anomalies.db</span>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <div class="bg-darkBg border border-darkBorder rounded-lg p-4 flex flex-col gap-3">
+                        <div class="flex justify-between items-center text-xs font-bold text-slate-300 border-b border-darkBorder pb-2">
+                            <span>ORDER BOOK DEPTH (±1%)</span>
+                            <span class="text-slate-500 text-[10px]">LIVE DENSITY</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 text-xs font-mono">
+                            <div class="flex flex-col gap-1.5">
+                                <span class="text-binanceBuy font-bold text-[11px]">BIDS (BUY)</span>
+                                <div id="bids-list" class="flex flex-col gap-1"></div>
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <span class="text-binanceSell font-bold text-[11px]">ASKS (SELL)</span>
+                                <div id="asks-list" class="flex flex-col gap-1"></div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="overflow-y-auto max-h-[220px] pr-1">
-                        <table class="w-full text-xs font-mono text-left">
-                            <thead class="text-slate-500 border-b border-darkBorder/50">
-                                <tr>
-                                    <th class="pb-1">TIME</th>
-                                    <th class="pb-1">SURGE</th>
-                                    <th class="pb-1">VOLA</th>
-                                    <th class="pb-1 text-right">SCORE</th>
-                                </tr>
-                            </thead>
-                            <tbody id="sqlite-logs-body" class="divide-y divide-darkBorder/30">
-                                <!-- Dynamic SQLite anomaly logs -->
-                            </tbody>
-                        </table>
+                    <div class="bg-darkBg border border-darkBorder rounded-lg p-4 flex flex-col gap-3">
+                        <div class="flex justify-between items-center text-xs font-bold text-slate-300 border-b border-darkBorder pb-2">
+                            <span>LIVE TRADE TAPE</span>
+                            <span class="text-binanceBuy text-[10px] flex items-center gap-1">
+                                <span class="w-2 h-2 rounded-full bg-binanceBuy animate-ping"></span> STREAMING
+                            </span>
+                        </div>
+                        <div class="overflow-y-auto max-h-[220px] pr-1">
+                            <table class="w-full text-xs font-mono text-left">
+                                <thead class="text-slate-500 border-b border-darkBorder/50">
+                                    <tr>
+                                        <th class="pb-1">TIME</th>
+                                        <th class="pb-1">PRICE</th>
+                                        <th class="pb-1">QTY</th>
+                                        <th class="pb-1 text-right">SIDE</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="trade-tape-body" class="divide-y divide-darkBorder/30"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-darkBg border border-darkBorder rounded-lg p-4 flex flex-col gap-3">
+                        <div class="flex justify-between items-center text-xs font-bold text-slate-300 border-b border-darkBorder pb-2">
+                            <span>SQLITE ANOMALY LOGS</span>
+                            <span class="text-blue-400 text-[10px] font-mono">anomalies.db</span>
+                        </div>
+                        <div class="overflow-y-auto max-h-[220px] pr-1">
+                            <table class="w-full text-xs font-mono text-left">
+                                <thead class="text-slate-500 border-b border-darkBorder/50">
+                                    <tr>
+                                        <th class="pb-1">TIME</th>
+                                        <th class="pb-1">SURGE</th>
+                                        <th class="pb-1">VOLA</th>
+                                        <th class="pb-1 text-right">SCORE</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sqlite-logs-body" class="divide-y divide-darkBorder/30"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
+            </section>
 
+            <!-- 2. MAIN LIVE LEADERBOARD TABLE -->
+            <section class="bg-darkCard border border-darkBorder rounded-lg shadow-xl overflow-hidden flex flex-col">
+                <div class="px-5 py-3.5 border-b border-darkBorder flex justify-between items-center bg-darkHeader/50">
+                    <h2 class="font-bold text-sm text-slate-100 flex items-center gap-2">
+                        🏆 LIVE ANOMALY LEADERBOARD
+                    </h2>
+                    <span class="text-xs text-slate-400 font-mono">Auto-sorted by Score • Updated 1x/min (Full 1-Min Summary)</span>
                 </div>
-        </section>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs font-mono">
+                        <thead>
+                            <tr class="bg-darkHeader/80 text-slate-400 border-b border-darkBorder select-none">
+                                <th class="py-3 px-4 font-semibold w-12 text-center">#</th>
+                                <th class="py-3 px-4 font-semibold cursor-pointer hover:text-binanceYellow transition" onclick="handleSort('symbol')">
+                                    SYMBOL <span id="sort-icon-symbol" class="text-[10px] text-slate-500"></span>
+                                </th>
+                                <th class="py-3 px-4 font-semibold cursor-pointer hover:text-binanceYellow transition" onclick="handleSort('price')">
+                                    PRICE <span id="sort-icon-price" class="text-[10px] text-slate-500"></span>
+                                </th>
+                                <th class="py-3 px-4 font-semibold min-w-[180px] cursor-pointer hover:text-binanceYellow transition" onclick="handleSort('volume_surge_pct')">
+                                    VOL SURGE (%) <span id="sort-icon-volume_surge_pct" class="text-[10px] text-slate-500"></span>
+                                </th>
+                                <th class="py-3 px-4 font-semibold cursor-pointer hover:text-binanceYellow transition" onclick="handleSort('volatility_pct')">
+                                    VOLATILITY (%) <span id="sort-icon-volatility_pct" class="text-[10px] text-slate-500"></span>
+                                </th>
+                                <th class="py-3 px-4 font-semibold cursor-pointer hover:text-binanceYellow transition" onclick="handleSort('trades_count')">
+                                    TRADES/M <span id="sort-icon-trades_count" class="text-[10px] text-slate-500"></span>
+                                </th>
+                                <th class="py-3 px-4 font-semibold cursor-pointer hover:text-binanceYellow transition" onclick="handleSort('orderbook_density')">
+                                    OB DENSITY <span id="sort-icon-orderbook_density" class="text-[10px] text-slate-500"></span>
+                                </th>
+                                <th class="py-3 px-4 font-semibold cursor-pointer hover:text-binanceYellow transition" onclick="handleSort('score')">
+                                    SCORE <span id="sort-icon-score" class="text-[10px] text-binanceYellow">▼</span>
+                                </th>
+                                <th class="py-3 px-4 font-semibold text-center w-24">ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body" class="divide-y divide-darkBorder/60">
+                            <tr>
+                                <td colspan="9" class="py-8 text-center text-slate-500 font-mono">
+                                    Connecting to Binance WebSocket streams...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
 
     </main>
 
