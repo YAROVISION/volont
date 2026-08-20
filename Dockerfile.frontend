@@ -2,6 +2,7 @@ FROM nginx:alpine
 
 # Копіюємо статики та налаштування Nginx безпосередньо в контейнер
 COPY index.html /usr/share/nginx/html/index.html
+COPY urgent.html /usr/share/nginx/html/urgent.html
 COPY favicon.svg /usr/share/nginx/html/favicon.svg
 COPY static /usr/share/nginx/html/static
 COPY nginx.conf /etc/nginx/conf.d/default.conf
