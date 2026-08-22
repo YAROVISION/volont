@@ -38,8 +38,9 @@
         <div class="flex items-center gap-4">
             <div class="flex items-center gap-2">
                 <span class="w-3 h-3 rounded-full bg-red-500 animate-pulse glow-red"></span>
-                <span class="font-bold text-lg tracking-wider text-white flex items-center gap-2 font-mono">
-                    🚨 ТЕРМІНОВО! // АВАРІЙНИЙ МОНІТОРИНГ
+                <span class="text-base">🚨</span>
+                <span class="hidden sm:inline font-bold text-lg tracking-wider text-white font-mono">
+                    ТЕРМІНОВО! // АВАРІЙНИЙ МОНІТОРИНГ
                 </span>
             </div>
             <!-- Navigation Tabs -->
@@ -54,7 +55,7 @@
         </div>
 
         <!-- System Status Badges -->
-        <div class="flex items-center gap-4 text-xs font-mono">
+        <div class="hidden md:flex items-center gap-4 text-xs font-mono">
             <div class="flex items-center gap-2 bg-darkBg border border-darkBorder px-3 py-1.5 rounded-lg">
                 <span class="text-slate-400">ПЕРЕВІРКА:</span>
                 <span class="text-emerald-400 font-bold flex items-center gap-1">
@@ -95,18 +96,18 @@
             </div>
 
             <!-- Add New Pair Control Form -->
-            <form id="add-pair-form" class="flex items-center gap-2 bg-darkBg border border-darkBorder p-2.5 rounded-xl z-10">
-                <div class="flex flex-col gap-0.5">
+            <form id="add-pair-form" class="flex flex-wrap sm:flex-nowrap items-end gap-2 bg-darkBg border border-darkBorder p-2.5 rounded-xl z-10 w-full sm:w-auto">
+                <div class="flex flex-col gap-0.5 flex-1 sm:flex-initial">
                     <label class="text-[10px] font-mono text-slate-400 font-bold">ДОДАТИ НОВУ ПАРУ</label>
                     <input type="text" id="new-pair-symbol" placeholder="напр. BTC, ETH, SOL..." required
-                        class="bg-darkCard border border-darkBorder rounded px-2.5 py-1 text-xs text-white uppercase focus:outline-none focus:border-binanceYellow font-mono w-32">
+                        class="bg-darkCard border border-darkBorder rounded px-2.5 py-1 text-xs text-white uppercase focus:outline-none focus:border-binanceYellow font-mono w-full sm:w-32">
                 </div>
-                <div class="flex flex-col gap-0.5">
+                <div class="flex flex-col gap-0.5 flex-1 sm:flex-initial">
                     <label class="text-[10px] font-mono text-slate-400 font-bold">МІНІМУМ ЗА 1 ХВ (МОНЕТ)</label>
                     <input type="number" step="any" id="new-pair-minimum" placeholder="напр. 300000000" required
-                        class="bg-darkCard border border-darkBorder rounded px-2.5 py-1 text-xs text-white focus:outline-none focus:border-binanceYellow font-mono w-44">
+                        class="bg-darkCard border border-darkBorder rounded px-2.5 py-1 text-xs text-white focus:outline-none focus:border-binanceYellow font-mono w-full sm:w-44">
                 </div>
-                <button type="submit" class="mt-4 bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-3 py-1.5 rounded transition text-xs font-mono flex items-center gap-1 shadow">
+                <button type="submit" class="w-full sm:w-auto mt-2 sm:mt-0 bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-3 py-1.5 rounded transition text-xs font-mono flex items-center justify-center gap-1 shadow">
                     ➕ Додати
                 </button>
             </form>
@@ -173,6 +174,6 @@
     </footer>
 
     <!-- App JavaScript -->
-    <script src="/static/urgent.js"></script>
+    <script src="/static/urgent.js?v=20260822_pepe"></script>
 </body>
 </html>

@@ -134,13 +134,20 @@ function renderUrgentStrips(pairs) {
             ? `<span class="text-emerald-400 font-bold">${pair.last_alert_time}</span>`
             : `<span class="text-slate-500 font-normal">Не надсилалося</span>`;
 
+        let logoText = (pair.base_currency || '').toString();
+        if (logoText.toUpperCase().includes('PEPE') || (pair.symbol && pair.symbol.toUpperCase().includes('PEPE'))) {
+            logoText = 'PEPE';
+        } else if (logoText.startsWith('1000')) {
+            logoText = logoText.replace(/^1000/, '');
+        }
+
         html += `
             <div class="${stripBorderClass} border rounded-xl p-4 shadow-xl flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 transition-all duration-300 font-mono">
                 
                 <!-- 1. НАЗВА ПАРИ & ЦІНА -->
                 <div class="flex items-center gap-3.5 min-w-[200px]">
-                    <div class="w-10 h-10 rounded-lg bg-darkHeader border border-darkBorder flex items-center justify-center font-black text-binanceYellow text-base shadow">
-                        ${pair.base_currency}
+                    <div class="w-10 h-10 rounded-lg bg-darkHeader border border-darkBorder flex items-center justify-center font-black text-binanceYellow ${logoText.length > 5 ? 'text-[10px]' : logoText.length > 3 ? 'text-xs' : 'text-sm'} shadow">
+                        ${logoText}
                     </div>
                     <div class="flex flex-col gap-0.5">
                         <div class="flex items-center gap-2">
