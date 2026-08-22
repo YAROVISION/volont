@@ -73,13 +73,19 @@ class DatabaseManager:
             );
             """)
 
-            # Seed default ACEUSDT if empty
+            # Seed default urgent monitored pairs if empty
             async with db.execute("SELECT COUNT(*) FROM urgent_monitored_pairs") as cursor:
                 row = await cursor.fetchone()
                 if row and row[0] == 0:
-                    await db.execute(
+                    default_pairs = [
+                        ("ACEUSDT", 1000000.0, 1),
+                        ("PORTALUSDT", 1000000.0, 1),
+                        ("POLUSDT", 1500000.0, 1),
+                        ("1000PEPEUSDT", 100000000.0, 1),
+                    ]
+                    await db.executemany(
                         "INSERT INTO urgent_monitored_pairs (symbol, base_minimum, enabled) VALUES (?, ?, ?)",
-                        ("ACEUSDT", 300000000.0, 1)
+                        default_pairs
                     )
 
             await db.execute("CREATE INDEX IF NOT EXISTS idx_anomaly_symbol ON anomaly_logs(symbol);")
